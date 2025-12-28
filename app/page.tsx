@@ -1,65 +1,112 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import Image from 'next/image';
+
+export default function HomePage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
+    <main className="w-full h-screen overflow-hidden">
+      <div className="relative w-full h-full">
+        
+        {/* Hintergrundbild */}
         <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
+          src="/ovb-header.png"
+          alt="Header"
+          fill
           priority
+          className="object-cover"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+ {/* weißes Overlay oben */}
+        <div className="absolute top-0 left-0 w-full bg-white bg-opacity-80 py-8">
+         </div>
+		 {/* OVB Overlay */}
+        <div className="absolute bottom-0 left-0">
+  <Image
+    src="/ovb-overlay.png"
+    alt="Overlay"
+    width={1200}   // echte Bildbreite
+    height={400}   // echte Bildhöhe
+    className="w-[50vw] h-auto"
+  />
+</div>
+{/* Kreis-Container – responsive */}
+<div className="absolute bottom-2 left-140 -translate-x-1/2 flex gap-8 md:gap-12">
+
+  {/* Kapitalmarkt */}
+  <a
+    href="/kapitalmarkt"
+    className="bg-white rounded-full shadow-xl flex flex-col items-center justify-center text-center text-[#002b5c] font-semibold hover:bg-blue-50 transition
+               w-28 h-28 md:w-32 md:h-32 lg:w-40 lg:h-40"
+  >
+    <Image
+      src="/kapitalmarkt-icon.png"
+      alt="Kapitalmarkt Icon"
+      width={100}
+      height={100}
+      className="mt-[-20px] md:mt-[-25px] lg:mt-[-35px] w-12 md:w-16 lg:w-24 h-auto"
+    />
+    <span className="text-[0.75rem] md:text-[0.85rem] lg:text-[0.95rem] leading-tight">
+      Der Kapitalmarkt
+    </span>
+  </a>
+
+  {/* Lebensplan */}
+  <a
+    href="/lebensplan"
+    className="bg-white rounded-full shadow-xl flex flex-col items-center justify-center text-center text-[#002b5c] font-semibold hover:bg-blue-50 transition
+               w-28 h-28 md:w-32 md:h-32 lg:w-40 lg:h-40"
+  >
+    <Image
+      src="/lebensplan-icon.png"
+      alt="Lebensplan Icon"
+      width={80}
+      height={80}
+      className="mt-[-10px] md:mt-[-10px] lg:mt-[-10px] w-10 md:w-14 lg:w-20 h-auto"
+    />
+    <span className="text-[0.75rem] md:text-[0.85rem] lg:text-[0.95rem] leading-tight">
+      Finanzieller Lebensplan
+    </span>
+  </a>
+
+  {/* ABS */}
+  <a
+    href="/abs"
+    className="bg-white rounded-full shadow-xl flex flex-col items-center justify-center text-center text-[#002b5c] font-semibold hover:bg-blue-50 transition
+               w-28 h-28 md:w-32 md:h-32 lg:w-40 lg:h-40"
+  >
+    <Image
+      src="/abs-icon.png"
+      alt="ABS Icon"
+      width={90}
+      height={90}
+      className="mt-[-10px] md:mt-[-15px] lg:mt-[-15px] w-12 md:w-16 lg:w-24 h-auto"
+    />
+    <span className="text-[0.75rem] md:text-[0.85rem] lg:text-[0.95rem] leading-tight">
+      ABS-System
+    </span>
+  </a>
+
+  {/* Werbung */}
+  <a
+    href="/werbung"
+    className="bg-white rounded-full shadow-xl flex flex-col items-center justify-center text-center text-[#002b5c] font-semibold hover:bg-blue-50 transition
+               w-28 h-28 md:w-32 md:h-32 lg:w-40 lg:h-40"
+  >
+    <Image
+      src="/werbung-icon.png"
+      alt="Werbung Icon"
+      width={90}
+      height={90}
+      className="mt-[-15px] md:mt-[-20px] lg:mt-[-20px] w-12 md:w-16 lg:w-24 h-auto"
+    />
+    <span className="text-[0.75rem] md:text-[0.85rem] lg:text-[0.95rem] leading-tight">
+      Werbung
+    </span>
+  </a>
+
+</div>
+
+
+      </div>
+    </main>
   );
 }
