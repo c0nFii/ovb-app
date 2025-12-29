@@ -65,11 +65,6 @@ export default function HomePage() {
           label="ABS‑System"
         />
         <NavCircle
-          href="/pages/werbung"
-          icon="/abs-icon.png"
-          label="ABS‑System"
-        />
-        <NavCircle
           href="/werbung"
           icon="/werbung-icon.png"
           label="Werbung"

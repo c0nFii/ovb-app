@@ -63,7 +63,7 @@ export default function TopBar({
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 16 }}>
           <NavIcon src="/icons/arrow-left.png" onClick={() => window.history.back()} />
           <NavIcon src="/icons/refresh-icon.png" onClick={() => window.location.reload()} />
-          <a href="/lebensplan">
+          <a href="/pages/lebensplan">
             <Image src="/icons/arrow-right.png" alt="Weiter" width={50} height={50} />
           </a>
         </div>
