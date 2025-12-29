@@ -1,14 +1,46 @@
 @import "tailwindcss";
 
-/* --- Pulsierender gefüllter Kreis (vor dem Klick) --- */
-@keyframes pulse-wave {
+/* ======================================================
+   PULSE CIRCLE (Start & Next Trigger)
+   ====================================================== */
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  60% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}
+
+.pulse-ring {
+  position: absolute;
+  inset: -24px;                 /* Platz zum Wachsen */
+  border: 8px solid #002b5c9a;
+  opacity: 0.3;
+  border-radius: 9999px;
+  animation: pulse-ring 1.4s ease-out infinite;
+  pointer-events: none;
+}
+
+/* ======================================================
+   OVB TRIGGER – PULSIERENDES RUFZEICHEN
+   ====================================================== */
+
+@keyframes pulse-icon {
   0% {
     transform: scale(1);
     opacity: 1;
   }
   50% {
     transform: scale(1.15);
-    opacity: 0.6;
+    opacity: 0.7;
   }
   100% {
     transform: scale(1);
@@ -16,84 +48,83 @@
   }
 }
 
-.pulse-wave {
-  animation: pulse-wave 0.8s ease-in-out infinite;
+.pulse-icon {
+  animation: pulse-icon 1.6s ease-in-out infinite;
 }
 
-/* --- Tailwind Utility Layer für Custom Animations --- */
-@layer utilities {
+.ovb-trigger {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
 
-  /* --- Einwisch-Animation --- */
-  @keyframes slide-fade-in {
-    0% {
-      opacity: 0;
-      transform: translateX(-30px);
-    }
-    100% {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-  .slide-fade-in {
-    animation: slide-fade-in 0.8s ease-out forwards;
-  }
+  font-size: 48px;
+  color: #002b5c;
+  cursor: pointer;
+  z-index: 9999;
 
-  /* --- Edler Wellen-Ring --- */
-  @keyframes ring-wave {
-    0% {
-      transform: scale(1);
-      opacity: 0.8;
-    }
-    60% {
-      transform: scale(1.7);
-      opacity: 0;
-    }
-    100% {
-      transform: scale(1.7);
-      opacity: 0;
-    }
-  }
-
-  .ring-wave {
-    position: absolute;
-    width: 180px;
-    height: 180px;
-    border: 4px solid #002b5c;
-    border-radius: 9999px;
-    animation: ring-wave 2.8s ease-out infinite;
-    pointer-events: none;
-  }
-
-  /* --- Premium Fade-In --- */
-  @keyframes fade-in-soft {
-    0% {
-      opacity: 0;
-      transform: scale(0.94);
-      filter: blur(4px);
-    }
-    60% {
-      opacity: 1;
-      transform: scale(1.02);
-      filter: blur(0px);
-    }
-    100% {
-      opacity: 1;
-      transform: scale(1);
-      filter: blur(0px);
-    }
-  }
-
-  .fade-in-soft {
-    animation: fade-in-soft 1s ease-out forwards;
-  }
+  /* ✅ FIX: richtige Animation */
+  animation: pulse-icon 1.6s ease-in-out infinite;
 }
-@keyframes reveal-left {
+
+/* ======================================================
+   IMAGE SEQUENCE – Premium Fade-In
+   ====================================================== */
+
+@keyframes fade-in-premium {
   0% {
-    clip-path: inset(0 100% 0 0); /* komplett verdeckt */
+    opacity: 0;
+    transform: scale(0.92);
+    filter: blur(12px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.02);
+    filter: blur(0);
   }
   100% {
-    clip-path: inset(0 0 0 0); /* komplett sichtbar */
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+.premium-image {
+  animation: fade-in-premium 1.2s ease-out forwards;
+  filter: drop-shadow(0 0 18px rgba(0, 0, 0, 0.18));
+}
+
+/* ======================================================
+   OPTIONAL SLIDE / REVEAL EFFECTS
+   ====================================================== */
+
+@keyframes slide-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.slide-fade-in {
+  animation: slide-fade-in 0.8s ease-out forwards;
+}
+
+@keyframes reveal-left {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
   }
 }
 
@@ -101,48 +132,38 @@
   animation: reveal-left 1.2s ease-out forwards;
 }
 
+/* ======================================================
+   EXPORT FIX – NUR FÜR EXPORT, NICHT GLOBAL
+   ====================================================== */
 
-/* ------------------------------------------------------ */
-/* --- EXPORT FIX: ALLES DEAKTIVIEREN FÜR html2canvas --- */
-/* ------------------------------------------------------ */
-
-/* 1) Alle Animationen & Transitions deaktivieren */
-.no-transform * {
+.no-transform .export-image-wrapper,
+.no-transform .export-image-wrapper * {
   animation: none !important;
   transition: none !important;
 }
 
-/* 2) Keine Transforms & volle Deckkraft */
 .no-transform .export-image-wrapper {
   transform: none !important;
   opacity: 1 !important;
 }
 
-/* 3) Keine Filter (Blur etc.) */
 .no-transform .export-image {
   filter: none !important;
   opacity: 1 !important;
 }
 
-/* ------------------------------------------------------ */
-/* --- Theme & Body Styles --- */
-/* ------------------------------------------------------ */
+/* ======================================================
+   THEME & BODY
+   ====================================================== */
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --foreground: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #ffffff;
     --foreground: #ededed;
   }
 }
