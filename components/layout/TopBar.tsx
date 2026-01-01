@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { PresentationMode } from "@/app/types/presentation";
 
 export default function TopBar({
@@ -12,22 +13,30 @@ export default function TopBar({
   setMode: (m: PresentationMode) => void;
   onSave?: () => void;
 }) {
+  const pathname = usePathname();
+
+  const nextPageMap: Record<string, string | null> = {
+    "/": "/pages/kapitalmarkt",
+    "/pages/kapitalmarkt": "/pages/lebensplan",
+    "/pages/lebensplan": "/pages/abs",
+    "/pages/abs": "/werbung",
+    "/werbung": null,
+  };
+
+  const nextPage = nextPageMap[pathname] ?? null;
+
   return (
     <div
-  style={{
-    position: "fixed",
-    top: 0,
-    left: 0,
-
-    /* 🔥 KEIN vw / dvw */
-    width: "100%",
-
-    background: "rgba(255,255,255,0.85)",
-    zIndex: 9999,
-    padding: "8px 24px",
-  }}
->
-
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100%",
+        background: "rgba(255,255,255,0.85)",
+        zIndex: 9999,
+        padding: "8px 24px",
+      }}
+    >
       <div
         style={{
           display: "grid",
@@ -63,24 +72,19 @@ export default function TopBar({
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 16 }}>
           <NavIcon src="/icons/arrow-left.png" onClick={() => window.history.back()} />
           <NavIcon src="/icons/refresh-icon.png" onClick={() => window.location.reload()} />
-          <a href="/pages/lebensplan">
-            <Image src="/icons/arrow-right.png" alt="Weiter" width={50} height={50} />
-          </a>
+
+          {nextPage && (
+            <a href={nextPage}>
+              <Image src="/icons/arrow-right.png" alt="Weiter" width={50} height={50} />
+            </a>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-function Tool({
-  icon,
-  active,
-  onClick,
-}: {
-  icon: string;
-  active?: boolean;
-  onClick: () => void;
-}) {
+function Tool({ icon, active, onClick }: { icon: string; active?: boolean; onClick: () => void }) {
   return (
     <Image
       src={icon}
@@ -95,13 +99,7 @@ function Tool({
   );
 }
 
-function NavIcon({
-  src,
-  onClick,
-}: {
-  src: string;
-  onClick: () => void;
-}) {
+function NavIcon({ src, onClick }: { src: string; onClick: () => void }) {
   return (
     <button onClick={onClick}>
       <Image

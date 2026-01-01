@@ -30,7 +30,14 @@ export default function HomePage() {
       />
 
       {/* OVB Overlay */}
-      <div style={{ position: "absolute", bottom: 100, left: 0 }}>
+      <div
+  style={{
+    position: "absolute",
+    bottom: "clamp(40px, 10vh, 120px)",
+    left: 0,
+  }}
+>
+
         <Image
           src="/ovb-overlay.png"
           alt="Overlay"
@@ -41,14 +48,15 @@ export default function HomePage() {
 
       {/* Navigations‑Kreise – FIX positioniert */}
       <div
-        style={{
-          position: "absolute",
-          bottom: 120,
-          left: 200,
-          display: "flex",
-          gap: 50,
-        }}
-      >
+  style={{
+    position: "absolute",
+    bottom: "clamp(40px, 10vh, 120px)",
+    left: "clamp(40px, 12vw, 200px)",
+    display: "flex",
+    gap: "clamp(20px, 4vw, 50px)",
+  }}
+>
+
         <NavCircle
           href="/pages/kapitalmarkt"
           icon="/kapitalmarkt-icon.png"
