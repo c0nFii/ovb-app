@@ -36,9 +36,7 @@ export default function ServiceErklaerung({ onDone }: ServiceErklaerungProps) {
           fontWeight: 700,
           color: "#002b5c",
         }}
-      >
-        S – Service
-      </div>
+      />
 
       {/* Kreisbereich */}
       <div

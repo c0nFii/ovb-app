@@ -38,9 +38,7 @@ export default function BeratungErklaerung({ onDone }: BeratungErklaerungProps) 
           fontWeight: 700,
           color: "#002b5c",
         }}
-      >
-        B – Beratung
-      </div>
+      />
 
       {/* Kreisbereich */}
       <div

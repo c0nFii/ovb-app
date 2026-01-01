@@ -19,8 +19,8 @@ export default function TopBar({
     "/": "/pages/kapitalmarkt",
     "/pages/kapitalmarkt": "/pages/lebensplan",
     "/pages/lebensplan": "/pages/abs",
-    "/pages/abs": "/werbung",
-    "/werbung": null,
+    "/pages/abs": "/pages/werbung",
+    "/pages/werbung": null,
   };
 
   const nextPage = nextPageMap[pathname] ?? null;

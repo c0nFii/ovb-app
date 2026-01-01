@@ -63,9 +63,7 @@ export default function AnalyseErklaerung({ onDone }: AnalyseErklaerungProps) {
           fontWeight: 700,
           color: "#002b5c",
         }}
-      >
-        A – Analyse
-      </div>
+      />
 
       {/* ABS-Kreisbereich */}
       <div
