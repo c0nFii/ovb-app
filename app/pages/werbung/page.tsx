@@ -1,41 +1,53 @@
 "use client";
 
 import { useState } from "react";
-
 import AppScreenWrapper from "@/components/AppScreenWrapper";
 import TopBar from "@/components/layout/TopBar";
+import PulseCircle from "@/components/presentation/PulseCircle";
+import GrundSkel from "./grundskel";
+import WerbungFlow from "./werbung";
 
-import DrawingSVG from "@/components/presentation/DrawingSVG";
-import LaserPointer from "@/components/presentation/LaserPointer";
-import ExportArea from "@/components/export/ExportArea";
-
-export default function WebungsPage() {
+export default function WerbungPage() {
+  const [started, setStarted] = useState(false);
   const [mode, setMode] =
     useState<"normal" | "draw" | "erase" | "laser">("normal");
 
-  const TOPBAR_HEIGHT = 76;
+  const [showWerbung, setShowWerbung] = useState(false);
+
+  const handleFinish = () => {
+    setShowWerbung(true);
+  };
 
   return (
     <>
       <TopBar mode={mode} setMode={setMode} />
 
       <AppScreenWrapper>
-        <div
-          style={{
-            position: "absolute",
-            top: TOPBAR_HEIGHT,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "#ffffff", // 👈 weiße Seite
-          }}
-        >
-          <LaserPointer mode={mode} />
 
-          <ExportArea>
-            <DrawingSVG mode={mode} />
-          </ExportArea>
-        </div>
+        {!started && (
+          <PulseCircle
+            onClick={() => setStarted(true)}
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              zIndex: 50,
+            }}
+          />
+        )}
+
+        {started && (
+          <GrundSkel
+            mode={mode}
+            start={true}
+            onFinish={handleFinish}
+          />
+        )}
+
+        {/* 🔥 KEINE EXTRA-HÜLLE */}
+        {showWerbung && <WerbungFlow mode={mode} />}
+
       </AppScreenWrapper>
     </>
   );

@@ -30,28 +30,39 @@ export default function HomePage() {
       />
 
       {/* OVB Overlay */}
-      <div
+<div
   style={{
     position: "absolute",
-    bottom: "clamp(40px, 10vh, 120px)",
-    left: 0,
+    bottom: "clamp(40px, 5vh, 80px)",
+    left: -20,
   }}
 >
+  <div
+    style={{
+      position: "relative",
+      width: "clamp(300px, 40vw, 1000px)", // responsive width
+      height: "calc(clamp(300px, 35vw, 1000px) * 0.45)", // Höhe aus Seitenverhältnis
+    }}
+  >
+    <Image
+      src="/ovb-overlay.png"
+      alt="Overlay"
+      fill
+      sizes="(max-width: 1000px) 60vw, 1000px"
+      style={{
+        objectFit: "contain",
+      }}
+    />
+  </div>
+</div>
 
-        <Image
-          src="/ovb-overlay.png"
-          alt="Overlay"
-          width={1000}
-          height={200}
-        />
-      </div>
 
       {/* Navigations‑Kreise – FIX positioniert */}
       <div
   style={{
     position: "absolute",
-    bottom: "clamp(40px, 10vh, 120px)",
-    left: "clamp(40px, 12vw, 200px)",
+    bottom: "clamp(40px, 5vh, 120px)",
+    left: "clamp(40px, 5vw, 200px)",
     display: "flex",
     gap: "clamp(20px, 4vw, 50px)",
   }}
