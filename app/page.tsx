@@ -33,15 +33,15 @@ export default function HomePage() {
 <div
   style={{
     position: "absolute",
-    bottom: "clamp(40px, 5vh, 80px)",
+    bottom: "clamp(40px, 7vh, 80px)",
     left: -20,
   }}
 >
   <div
     style={{
       position: "relative",
-      width: "clamp(300px, 40vw, 1000px)", // responsive width
-      height: "calc(clamp(300px, 35vw, 1000px) * 0.45)", // Höhe aus Seitenverhältnis
+      width: "clamp(200px, 45vw, 1000px)", // responsive width
+      height: "calc(clamp(200px, 40vw, 1000px) * 0.45)", // Höhe aus Seitenverhältnis
     }}
   >
     <Image
@@ -86,7 +86,12 @@ export default function HomePage() {
         <NavCircle
           href="/pages/werbung"
           icon="/werbung-icon.png"
-          label="Werbung"
+          label={ <> Mehrwert<br /> zeigen</> }
+        />
+        <NavCircle
+          href="/pages/empfehlung"
+          icon="/netzwerk-icon.png"
+          label="Netzwerk"
         />
       </div>
 

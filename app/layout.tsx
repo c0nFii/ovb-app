@@ -40,6 +40,7 @@ export default function RootLayout({
           overflow: "hidden",
           width: "1523px",   // <<< WICHTIG: gesamte Seite fixieren
           height: "400px",   // <<< WICHTIG: gesamte Seite fixieren
+          backgroundColor: "#ffffff",
         }}
       >
         {children}

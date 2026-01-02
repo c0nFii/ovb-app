@@ -58,7 +58,7 @@ export default function NavCircle({
 
       <div
         style={{
-          fontSize: "clamp(10px, 1.2vw, 12px)", // 👈 responsive Text
+          fontSize: "clamp(7px, 0.8vw, 15px)", // 👈 responsive Text
           lineHeight: 1.15,
         }}
       >

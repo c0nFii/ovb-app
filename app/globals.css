@@ -157,19 +157,16 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #ffffff;
-    --foreground: #ededed;
   }
 }
 
 body {
   margin: 0;
   background: var(--background);
-  color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
