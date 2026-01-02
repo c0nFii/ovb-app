@@ -4,7 +4,8 @@ import { useState } from "react";
 import AppScreenWrapper from "@/components/AppScreenWrapper";
 import TopBar from "@/components/layout/TopBar";
 import PulseCircle from "@/components/presentation/PulseCircle";
-import EmpfehlungFlow from "./EmpfehlungFlow"; // dein Flow von vorher
+import EmpfehlungFlow from "./EmpfehlungFlow";
+import DrawingSVG from "@/components/presentation/DrawingSVG";
 
 export default function EmpfehlungPage() {
   const [started, setStarted] = useState(false);
@@ -16,6 +17,9 @@ export default function EmpfehlungPage() {
       <TopBar mode={mode} setMode={setMode} />
 
       <AppScreenWrapper>
+        {/* ===== DRAWING LAYER (SVG) ===== */}
+        <DrawingSVG mode={mode} />
+
         {/* ===== STARTKREIS ===== */}
         {!started && (
           <PulseCircle
