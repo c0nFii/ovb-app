@@ -7,11 +7,12 @@ export default function ExportArea({ children }: { children: ReactNode }) {
     <div
       id="export-area"
       style={{
-        position: "relative",
-        width: 2560,
-        height: 1440,
-        background: "#ffffff",
-        overflow: "hidden",
+        position: "fixed",
+        top: 0,
+        left: "-10000px",        // komplett außerhalb des Viewports
+        width: "794px",          // A4 @ 96dpi (für Text egal, aber stabil)
+        pointerEvents: "none",   // kein Einfluss auf UI
+        visibility: "hidden",    // nicht sichtbar
       }}
     >
       {children}

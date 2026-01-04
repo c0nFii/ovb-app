@@ -2,12 +2,17 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import PulseCircle from "@/components/presentation/PulseCircle";
 
 export default function EmpfehlungFlow() {
+  const router = useRouter();
+
   const [step, setStep] = useState(0);
   const [showRing, setShowRing] = useState(false);
+  const [showWichtigButton, setShowWichtigButton] = useState(false);
 
+  // Ring nach 2 Sekunden
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowRing(true);
@@ -16,7 +21,7 @@ export default function EmpfehlungFlow() {
     return () => clearTimeout(timer);
   }, []);
 
-
+  // 🔥 WICHTIG: wichtig.png NICHT in der sequence
   const sequence = [
     "kfz.png",
     "kfzpfeil.png",
@@ -25,24 +30,29 @@ export default function EmpfehlungFlow() {
     "35.png",
     "steuern.png",
     "steuerpfeil.png",
-    "strich.png", // 🔥 finaler Schritt
+    "strich.png", // letzter normales Bild
   ];
 
-  const lastRingStep = sequence.length - 2; // Ring darf bei steuerpfeil noch erscheinen
+  const lastRingStep = sequence.length - 1;
 
   const handleClick = () => {
     setShowRing(false);
+    setStep((s) => s + 1);
 
-    // Bild sofort anzeigen
-    setStep(s => s + 1);
-
-    // Ring nur zurückbringen, wenn wir NICHT beim letzten Bild sind
     if (step < lastRingStep) {
       setTimeout(() => {
         setShowRing(true);
-      }, 2000); // 🔥 2 Sekunden Pause
+      }, 2000);
     }
   };
+
+  // wichtig.png → nach 2s pulsieren
+  useEffect(() => {
+    if (step === sequence.length) {
+      const t = setTimeout(() => setShowWichtigButton(true), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [step]);
 
   const wipeStyle = (isNew: boolean): React.CSSProperties => ({
     objectFit: "contain",
@@ -80,7 +90,7 @@ export default function EmpfehlungFlow() {
         )}
       </div>
 
-      {/* Klickbarer Ring */}
+      {/* Normaler Ring */}
       {showRing && step <= lastRingStep && (
         <PulseCircle
           onClick={handleClick}
@@ -95,7 +105,43 @@ export default function EmpfehlungFlow() {
         />
       )}
 
-      {/* Wipe Animation */}
+      {/* WICHTIG.png als Button */}
+      {step === sequence.length && (
+        <div
+          onClick={() => router.push("/pages/kontaktbogen")}
+          style={{
+            position: "absolute",
+            top: "60%", // 🔥 10% unter den anderen Bildern
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "clamp(300px, 60vw, 1400px)",
+            height: "clamp(200px, 40vw, 1400px)",
+            cursor: "pointer",
+            animation: showWichtigButton
+              ? "pulse 1.6s ease-in-out infinite"
+              : "none",
+            zIndex: 99999,
+            pointerEvents: "auto",
+          }}
+        >
+          <Image
+            src="/pictures/wichtig.png"
+            alt="Wichtig"
+            fill
+            style={{
+              objectFit: "contain",
+              clipPath: showWichtigButton
+                ? "inset(0 0 0 0)"
+                : "inset(0 100% 0 0)",
+              animation: showWichtigButton
+                ? "none"
+                : "wipeIn 2s ease forwards",
+            }}
+          />
+        </div>
+      )}
+
+      {/* Animationen */}
       <style jsx>{`
         @keyframes wipeIn {
           from {
@@ -103,6 +149,18 @@ export default function EmpfehlungFlow() {
           }
           to {
             clip-path: inset(0 0 0 0);
+          }
+        }
+
+        @keyframes pulse {
+          0% {
+            transform: translate(-50%, -50%) scale(1);
+          }
+          50% {
+            transform: translate(-50%, -50%) scale(1.01);
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(1);
           }
         }
       `}</style>
