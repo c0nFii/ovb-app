@@ -93,6 +93,11 @@ export default function HomePage() {
           icon="/netzwerk-icon.png"
           label="Netzwerk"
         />
+        <NavCircle
+          href="/pages/chancenblatt"
+          icon="/chancenblatt-icon.png"
+          label="Chancenblatt"
+        />
       </div>
 
     </AppScreenWrapper>
