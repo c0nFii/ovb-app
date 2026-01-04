@@ -23,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="de">
       <head>
         {/* FIX: Darstellung auf allen Geräten identisch */}
         <meta

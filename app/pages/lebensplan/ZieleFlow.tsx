@@ -16,6 +16,13 @@ export default function ZieleFlow({ onDone }: { onDone?: () => void }) {
   const [showSituation, setShowSituation] = useState(false);
   const [afterSituation, setAfterSituation] = useState(false);
 
+  const [visibleImages, setVisibleImages] = useState<boolean[]>([
+    false,
+    false,
+    false,
+    false,
+  ]);
+
   const timeoutsRef = useRef<number[]>([]);
 
   useEffect(() => {
@@ -32,36 +39,60 @@ export default function ZieleFlow({ onDone }: { onDone?: () => void }) {
 
   const [finalRing, setFinalRing] = useState(false);
 
-const handleClick = () => {
-  if (finalRing) {
-    setShowRing(false);
-    onDone?.();
-    return;
-  }
+  const handleClick = () => {
+    if (finalRing) {
+      setShowRing(false);
+      onDone?.();
+      return;
+    }
 
-  if (step < 5) {
-    setShowRing(false);
-    setStep((prev) => prev + 1);
+    // ============================
+    // SEQUENZIELLES BILDER-EINBLENDEN
+    // ============================
+    if (step === 0) {
+      setShowRing(false);
 
-    schedule(() => {
-      setShowRing(true);
-    }, 2000);
+      const delays = [0, 1000, 2000, 3000]; // 1s Abstand
 
-    return;
-  }
+      delays.forEach((delay, index) => {
+        schedule(() => {
+          setVisibleImages((prev) => {
+            const copy = [...prev];
+            copy[index] = true;
+            return copy;
+          });
+        }, delay);
+      });
 
-  if (step === 5 && !showSituation) {
-    setShowSituation(true);
-    setShowRing(false);
+      // Ring erst nach allen Bildern
+      schedule(() => {
+        setShowRing(true);
+      }, 4000);
 
-    schedule(() => {
-      setShowRing(true);   // 👈 letzter Ring
-      setFinalRing(true);  // 👈 nur noch dieser Klick
-    }, 1500);
-  }
-};
+      setStep(1);
+      return;
+    }
 
+    // ============================
+    // SITUATION-PHASE
+    // ============================
+    if (step === 1 && !showSituation) {
+      setShowSituation(true);
+      setShowRing(false);
 
+      schedule(() => {
+        setShowRing(true);
+        setFinalRing(true);
+      }, 1500);
+
+      setStep(2);
+      return;
+    }
+  };
+
+  // ============================
+  // LAYOUT-WERTE
+  // ============================
   const contentMaxWidth = "clamp(760px, 78vw, 1120px)";
   const sidePadding = "clamp(0px, 1.5vw, 12px)";
   const imageW = "clamp(100px, 16vw, 150px)";
@@ -91,7 +122,7 @@ const handleClick = () => {
         Finanzieller Lebensweg
       </div>
 
-      {/* ZIELE + BILDER – IMMER IM DOM */}
+      {/* ZIELE + BILDER */}
       <div
         style={{
           width: "100%",
@@ -116,18 +147,22 @@ const handleClick = () => {
             transform: lift,
           }}
         >
+          {/* HAUS */}
           <div style={{ width: imageW }}>
             <img
               src={images[0]}
               alt="Haus"
               style={{
                 width: "100%",
-                opacity: step >= 2 ? 1 : 0,
-                transition: "opacity 0.4s ease",
+                opacity: visibleImages[0] ? 1 : 0,
+                animation: visibleImages[0]
+                  ? "zielFade 0.6s ease-out forwards"
+                  : "none",
               }}
             />
           </div>
 
+          {/* AUTO */}
           <div style={{ width: imageW }}>
             <img
               src={images[1]}
@@ -135,8 +170,10 @@ const handleClick = () => {
               style={{
                 width: "100%",
                 transform: "translate(20px, 30px)",
-                opacity: step >= 3 ? 1 : 0,
-                transition: "opacity 0.4s ease",
+                opacity: visibleImages[1] ? 1 : 0,
+                animation: visibleImages[1]
+                  ? "zielFade 0.6s ease-out forwards"
+                  : "none",
               }}
             />
           </div>
@@ -167,6 +204,7 @@ const handleClick = () => {
             transform: lift,
           }}
         >
+          {/* FAMILIE */}
           <div style={{ width: imageW }}>
             <img
               src={images[2]}
@@ -174,20 +212,25 @@ const handleClick = () => {
               style={{
                 width: "100%",
                 transform: "translate(-20px, 30px)",
-                opacity: step >= 4 ? 1 : 0,
-                transition: "opacity 0.4s ease",
+                opacity: visibleImages[2] ? 1 : 0,
+                animation: visibleImages[2]
+                  ? "zielFade 0.6s ease-out forwards"
+                  : "none",
               }}
             />
           </div>
 
+          {/* STRAND */}
           <div style={{ width: imageW }}>
             <img
               src={images[3]}
               alt="Strand"
               style={{
                 width: "100%",
-                opacity: step >= 5 ? 1 : 0,
-                transition: "opacity 0.4s ease",
+                opacity: visibleImages[3] ? 1 : 0,
+                animation: visibleImages[3]
+                  ? "zielFade 0.6s ease-out forwards"
+                  : "none",
               }}
             />
           </div>

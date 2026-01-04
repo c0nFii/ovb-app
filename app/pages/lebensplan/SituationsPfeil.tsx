@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import PulseCircle from "@/components/presentation/PulseCircle";
 
 const leftProducts = ["LV", "Kredit"];
@@ -12,29 +12,51 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
   const [step, setStep] = useState(0);
   const [problemStep, setProblemStep] = useState(0);
 
-  useEffect(() => {
-    const t1 = setTimeout(() => setShowProducts(true), 400);
-    const t2 = setTimeout(() => setShowRing(true), 1400);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
-  }, []);
+  // Alle Timer sauber tracken
+  const timers = useRef<number[]>([]);
 
+  const addTimer = (fn: () => void, ms: number) => {
+    const id = window.setTimeout(fn, ms);
+    timers.current.push(id);
+  };
+
+  const clearAllTimers = () => {
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+  };
+
+  // PRODUKTE + erster Ring
+  useEffect(() => {
+    clearAllTimers();
+
+    addTimer(() => setShowProducts(true), 400);
+
+    // Ring nur in Step 0–2 automatisch anzeigen
+    if (step < 3) {
+      addTimer(() => setShowRing(true), 1400);
+    }
+
+    return clearAllTimers;
+  }, [step]);
+
+  // PROBLEMLINIEN
   useEffect(() => {
     if (step !== 3) return;
 
+    clearAllTimers();
+    setShowRing(false);
     setProblemStep(0);
 
-    const t1 = setTimeout(() => setProblemStep(1), 0);
-    const t2 = setTimeout(() => setProblemStep(2), 1200);
-    const t3 = setTimeout(() => setProblemStep(3), 2400);
+    addTimer(() => setProblemStep(1), 0);
+    addTimer(() => setProblemStep(2), 1200);
+    addTimer(() => setProblemStep(3), 2400);
 
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-    };
+    // Ring erst nach AMS (3. Linie + Text)
+    addTimer(() => {
+      setShowRing(true);
+    }, 2400 + 1200); // wipe 3 + text fade
+
+    return clearAllTimers;
   }, [step]);
 
   return (
@@ -84,10 +106,10 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
         style={{
           position: "absolute",
           left: "50%",
-          top: "calc(7% + clamp(120px, 18vh, 220px))",
-          transform: "translateX(-50%)",
-          width: "clamp(180px, 18vw, 320px)",
-          height: "clamp(340px, 50vh, 880px)",
+          top: "55%",
+          transform: "translate(-50%, -50%)",
+          width: "clamp(360px, 35vw, 875px)",
+          height: "clamp(360px, 35vw, 875px)",
         }}
       >
         {["zielepfeil", "zielelinie"].map((img, i) => (
@@ -115,32 +137,26 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
         {
           text: "Krankheit",
           index: 1,
-          top: "calc(60% + 0vh)",
-          x: "calc(-51.5% + clamp(-30px, -40vh, -55px) - 107px)",
           startClip: "inset(0% 0% 0% 100%)",
-          side: "left",
-          textX: "clamp(-120px, -100vw, -50px)",
-          textY: "clamp(5px, 7vh, 10px)",
+          side: "right",
+          textX: "calc(80% + clamp(5px, 4vh, 63px))",
+          textY: "68%",
         },
         {
           text: "Unfall",
           index: 2,
-          top: "calc(50% + 0vh)",
-          x: "calc(2% + clamp(11px, 6vh, 23px) - 18px)",
           startClip: "inset(0% 100% 0% 0%)",
-          side: "right",
-          textX: "clamp(-80px, -100vw, -50px)",
-          textY: "clamp(75px, 7vh, 10px)",
+          side: "left",
+          textX: "calc(99% + clamp(30px, 2.5vh, 85px))",
+          textY: "45%",
         },
         {
           text: "AMS",
           index: 3,
-          top: "calc(40% + clamp(-6vh, -3vh, 8vh) - 30px)",
-          x: "calc(-55% + clamp(-175px, -20vw, -90px) + 31px)",
           startClip: "inset(0% 0% 0% 100%)",
-          side: "left",
-          textX: "clamp(-70px, -100vw, -50px)",
-          textY: "clamp(5px, 7vh, 10px)",
+          side: "right",
+          textX: "calc(90% + clamp(-20px, 3vh, 120px))",
+          textY: "23%",
         },
       ].map((p) =>
         problemStep >= p.index ? (
@@ -149,15 +165,18 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
             style={{
               position: "absolute",
               left: "50%",
-              top: p.top,
-              transform: `translateX(${p.x})`,
-              width: "clamp(160px, 22vw, 260px)",
+              top: "55%",
+              transform: "translate(-50%, -50%)",
+              width: "clamp(360px, 35vw, 875px)",
+              height: "clamp(360px, 35vw, 875px)",
             }}
           >
             <img
-              src="/pictures/problemlinie.png"
+              src={`/pictures/problemlinie${p.index === 1 ? "" : p.index}.png`}
               style={{
                 width: "100%",
+                height: "100%",
+                objectFit: "contain",
                 clipPath:
                   problemStep === p.index
                     ? p.startClip
@@ -170,32 +189,24 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
             />
 
             <div
-  style={{
-    position: "absolute",
-    top: p.textY,
-    ...(p.side === "left"
-      ? { left: p.textX }
-      : { right: p.textX }),
-    fontSize: "clamp(16px, 1.8vw, 22px)",
-    fontWeight: 600,
-    color: "#002b5c",
-    whiteSpace: "nowrap",
-
-    opacity: problemStep > p.index ? 1 : 0,
-
-    animationName:
-      problemStep === p.index ? "textFadeIn" : "none",
-    animationDuration: "0.3s",
-    animationTimingFunction: "ease",
-    animationFillMode: "forwards",
-    animationDelay: "1.2s",
-  }}
->
-  {p.text}
-</div>
-
-
-
+              style={{
+                position: "absolute",
+                top: p.textY,
+                ...(p.side === "left"
+                  ? { left: p.textX }
+                  : { right: p.textX }),
+                transform: "translate(-50%, -50%)",
+                fontSize: "clamp(22px, 2.4vw, 32px)",
+                fontWeight: 600,
+                color: "#002b5c",
+                whiteSpace: "nowrap",
+                opacity: problemStep > p.index ? 1 : 0,
+                animation: "textFadeIn 0.3s ease forwards",
+                animationDelay: "1.2s",
+              }}
+            >
+              {p.text}
+            </div>
           </div>
         ) : null
       )}
@@ -233,10 +244,6 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
         <div
           onClick={() => {
             setStep((s) => s + 1);
-            if (step === 3) {
-              setShowRing(false);
-              onDone?.();
-            }
           }}
           style={{
             position: "absolute",
@@ -257,12 +264,11 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
             clip-path: inset(0% 0% 0% 0%);
           }
         }
-@keyframes textFadeIn {
-  to {
-    opacity: 1;
-  }
-}
-
+        @keyframes textFadeIn {
+          to {
+            opacity: 1;
+          }
+        }
         @keyframes fadeIn {
           to {
             opacity: 1;
