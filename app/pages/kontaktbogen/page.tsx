@@ -9,7 +9,6 @@ import ExportArea from "@/components/export/ExportArea";
 import KontaktbogenForm from "./KontaktbogenForm";
 import NameDialog from "./NameDialog";
 
-/* 👉 NUR FÜR DEN KONTAKTBOGEN */
 import "./kontaktbogen.css";
 
 export const OVB_BLUE = "#013F72";
@@ -46,21 +45,49 @@ export default function KontaktbogenPage() {
 
   const handleSave = () => setShowNameDialog(true);
 
+  /* =========================
+     EXPORT + SOFORT TEILEN
+     ========================= */
+
   const confirmExport = async () => {
     if (!geberName.trim()) return;
 
-    setShowNameDialog(false);
     setMode("normal");
     setIsExporting(true);
-    await new Promise((r) => setTimeout(r, 150));
 
-    await exportEmpfehlungen({
+    const { fileName, blob } = await exportEmpfehlungen({
       name: geberName,
       empfehlungen: personen.filter((p) => p.name.trim() !== ""),
     });
 
     setIsExporting(false);
+    setShowNameDialog(false);
+
+    const file = new File([blob], fileName, {
+      type: "application/pdf",
+    });
+
+    // 📱 iOS / Android → Share Sheet
+    if (navigator.share) {
+      await navigator.share({
+        files: [file],
+        title: fileName,
+      });
+      return;
+    }
+
+    // 🖥 Desktop → Download
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
   };
+
+  /* =========================
+     FORM UPDATE
+     ========================= */
 
   const updateField =
     (index: number, field: keyof Person) =>
@@ -80,7 +107,6 @@ export default function KontaktbogenPage() {
       <TopBar mode={mode} setMode={setMode} onSave={handleSave} />
 
       <AppScreenWrapper>
-        {/* ===== KONTAKTBOGEN STAGE ===== */}
         <div className="kontaktbogen-stage">
           <DrawingSVG mode={mode} />
 

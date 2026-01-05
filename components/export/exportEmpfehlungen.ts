@@ -17,7 +17,7 @@ type ExportData = {
 export async function exportEmpfehlungen({
   name,
   empfehlungen,
-}: ExportData) {
+}: ExportData): Promise<{ fileName: string; blob: Blob }> {
   const pdf = new jsPDF("p", "mm", "a4");
 
   const pageWidth = 210;
@@ -31,7 +31,7 @@ export async function exportEmpfehlungen({
   const OVB_BLUE: [number, number, number] = [1, 63, 114];
 
   const headerY = 30;
-  const contentStartY = headerY + 20; // ⬅️ MEHR ABSTAND ZUM ERSTEN NAMEN
+  const contentStartY = headerY + 20;
 
   let y = contentStartY;
 
@@ -62,11 +62,11 @@ export async function exportEmpfehlungen({
   const setContentFont = () => {
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(11);
-    pdf.setTextColor(...OVB_BLUE); // ⬅️ ALLES IN OVB-BLAU
+    pdf.setTextColor(...OVB_BLUE);
   };
 
   /* =========================
-     HEADER ZEICHNEN
+     HEADER
   ========================== */
 
   const drawHeader = () => {
@@ -141,7 +141,7 @@ export async function exportEmpfehlungen({
       y += lines.length * 5;
     }
 
-    y += 7; // etwas mehr Luft zwischen Empfehlungen
+    y += 7;
   });
 
   /* =========================
@@ -166,8 +166,11 @@ export async function exportEmpfehlungen({
   }
 
   /* =========================
-     SAVE
+     RETURN (KEIN SAVE HIER!)
   ========================== */
 
-  pdf.save(`Empfehlungen ${name}.pdf`);
+  const fileName = `Empfehlungen ${name}.pdf`;
+  const blob = pdf.output("blob");
+
+  return { fileName, blob };
 }
