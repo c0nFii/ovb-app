@@ -10,27 +10,38 @@ export async function exportChancenblattPDF(
   answers: Record<string, string>
 ): Promise<{ fileName: string; blob: Blob }> {
   const pdf = new jsPDF();
+  const pageHeight = pdf.internal.pageSize.getHeight();
 
   /* =========================
-     LOGO – EXAKT WIE KONTAKTBOGEN
+     LOGO (fehlertolerant)
      ========================== */
 
+  let logoLoaded = false;
   const logo = new Image();
   logo.src = "/ovb.png";
 
   await new Promise<void>((resolve) => {
-    logo.onload = () => resolve();
+    logo.onload = () => {
+      logoLoaded = true;
+      resolve();
+    };
+    logo.onerror = () => resolve(); // ❗ weiter ohne Logo
   });
 
   const logoWidth = 28;
-  const logoHeight = (logo.height * logoWidth) / logo.width;
+  const logoHeight = logoLoaded
+    ? (logo.height * logoWidth) / logo.width
+    : 0;
 
   const logoX = 20;
   const logoY = 20;
-  const textX = logoX + logoWidth + 10;
+
+  const textX = logoLoaded ? logoX + logoWidth + 10 : 20;
   const textWidth = 190 - textX;
 
-  pdf.addImage(logo, "PNG", logoX, logoY, logoWidth, logoHeight);
+  if (logoLoaded) {
+    pdf.addImage(logo, "PNG", logoX, logoY, logoWidth, logoHeight);
+  }
 
   let y = logoY;
 
@@ -41,21 +52,26 @@ export async function exportChancenblattPDF(
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(18);
   pdf.setTextColor(...OVB_BLUE);
-  pdf.text(content.title, textX, y + 6, { maxWidth: textWidth });
 
-  y += 26;
+  const titleLines = pdf.splitTextToSize(content.title, textWidth);
+  pdf.text(titleLines, textX, y + 6);
+  y += titleLines.length * 8 + 6;
 
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(12);
-  pdf.text(content.text, textX, y, { maxWidth: textWidth });
 
-  y += 16;
-  pdf.text(content.hint, textX, y, { maxWidth: textWidth });
+  const textLines = pdf.splitTextToSize(content.text, textWidth);
+  pdf.text(textLines, textX, y);
+  y += textLines.length * 6 + 6;
 
-  y = Math.max(logoY + logoHeight, y) + 20;
+  const hintLines = pdf.splitTextToSize(content.hint, textWidth);
+  pdf.text(hintLines, textX, y);
+  y += hintLines.length * 6 + 10;
+
+  y = Math.max(logoY + logoHeight, y) + 10;
 
   /* =========================
-     FRAGEN
+     FRAGEN & ANTWORTEN
      ========================== */
 
   pdf.setFont("helvetica", "bold");
@@ -67,7 +83,7 @@ export async function exportChancenblattPDF(
     const opt = q.options.find((o) => o.value === answers[q.id]);
     if (!opt) return;
 
-    if (y > 260) {
+    if (y > pageHeight - 30) {
       pdf.addPage();
       y = 30;
     }
@@ -80,23 +96,33 @@ export async function exportChancenblattPDF(
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(11);
     pdf.setTextColor(...OVB_BLUE);
-    pdf.text(`${index + 1}. ${q.text}`, 20, y, { maxWidth: 170 });
-    y += 8;
+
+    const qLines = pdf.splitTextToSize(
+      `${index + 1}. ${q.text}`,
+      170
+    );
+    pdf.text(qLines, 20, y);
+    y += qLines.length * 6;
 
     pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(11);
     pdf.setTextColor(1, 63, 114, 0.75);
-    pdf.text(opt.label, 24, y, { maxWidth: 166 });
-    y += 12;
+
+    const aLines = pdf.splitTextToSize(opt.label, 166);
+    pdf.text(aLines, 24, y);
+    y += aLines.length * 6 + 6;
   });
 
   /* =========================
-     FOOTER
+     FOOTER (letzte Seite)
      ========================== */
 
   pdf.setFontSize(9);
   pdf.setTextColor(120);
-  pdf.text("Chancenblatt – persönliche Einschätzung", 20, 285);
+  pdf.text(
+    "Chancenblatt – persönliche Einschätzung",
+    20,
+    pageHeight - 10
+  );
 
   /* =========================
      RETURN

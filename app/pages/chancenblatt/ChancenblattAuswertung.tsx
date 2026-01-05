@@ -13,32 +13,36 @@ export default function ChancenblattAuswertung({
   type: ErgebnisTyp;
   answers: Record<string, string>;
 }) {
+  /* =========================
+     AUSWERTUNGS-INHALTE
+     ========================= */
+
   const content = {
     O: {
       title: "Du wirkst offen, neugierig und entwicklungsorientiert.",
       text:
-        "Menschen mit dieser Haltung sehen Möglichkeiten oft dort, wo andere noch zögern. Sie mögen es, Verantwortung zu übernehmen, sich weiterzuentwickeln und neue Wege zu gehen.",
+        "Menschen mit dieser Haltung sehen Möglichkeiten oft dort, wo andere noch zögern. Sie übernehmen gern Verantwortung und entwickeln sich kontinuierlich weiter.",
       hint:
-        "Interessant ist: Viele, die heute eng mit uns zusammenarbeiten, haben genau mit dieser Offenheit begonnen – ganz ohne konkrete Erwartungen.",
+        "Spannend ist: Viele, die heute eng mit uns zusammenarbeiten, haben genau mit dieser Offenheit begonnen – ganz ohne konkrete Erwartungen.",
     },
     A: {
       title: "Du triffst Entscheidungen bewusst und mit Klarheit.",
       text:
-        "Du möchtest verstehen, wie Dinge funktionieren, bevor du dich festlegst. Zahlen, Zusammenhänge und langfristige Perspektiven spielen für dich eine große Rolle.",
+        "Du möchtest Zusammenhänge verstehen, bevor du dich festlegst. Struktur, Zahlen und langfristige Perspektiven geben dir Sicherheit.",
       hint:
-        "Viele mit einem ähnlichen Profil wollten anfangs nur Einblick – und haben dann gemerkt, dass unsere Arbeitsweise sehr gut zu ihnen passt.",
+        "Viele mit einem ähnlichen Profil wollten anfangs lediglich Einblick – und haben dann gemerkt, wie gut unsere Arbeitsweise zu ihnen passt.",
     },
     S: {
-      title: "Dir sind Struktur, Eigenverantwortung und Stabilität wichtig.",
+      title: "Dir sind Eigenverantwortung und klare Strukturen wichtig.",
       text:
-        "Du arbeitest gern verlässlich, möchtest dein Tempo selbst bestimmen und suchst ein Umfeld, das Sicherheit gibt, ohne einzuengen.",
+        "Du arbeitest gern selbstständig, schätzt aber ein stabiles System im Hintergrund. Dein Tempo bestimmst du am liebsten selbst.",
       hint:
-        "Genau dafür ist unser System gedacht: klare Strukturen im Hintergrund und Freiheit in der Umsetzung.",
+        "Genau dafür ist unser System gemacht: Freiheit in der Umsetzung, Klarheit in den Strukturen.",
     },
     V: {
-      title: "Du gehst bedacht vor und übernimmst Verantwortung.",
+      title: "Du gehst bedacht vor und entscheidest verantwortungsvoll.",
       text:
-        "Du prüfst neue Themen in Ruhe und triffst Entscheidungen lieber auf einer soliden Grundlage. Diese Haltung sorgt oft für besonders nachhaltige Wege.",
+        "Du prüfst neue Themen in Ruhe und legst Wert auf Sicherheit und Verlässlichkeit. Das sorgt oft für besonders nachhaltige Entscheidungen.",
       hint:
         "Viele, die heute sehr zufrieden bei uns sind, haben genau so begonnen: erst beobachten, dann verstehen – und dann bewusst entscheiden.",
     },
@@ -54,11 +58,19 @@ export default function ChancenblattAuswertung({
   } | null>(null);
 
   useEffect(() => {
-    exportChancenblattPDF(type, content, answers).then(setPdfData);
+    let mounted = true;
+
+    exportChancenblattPDF(type, content, answers).then((data) => {
+      if (mounted) setPdfData(data);
+    });
+
+    return () => {
+      mounted = false;
+    };
   }, [type]);
 
   /* =========================
-     NUR NOCH TEILEN / DOWNLOAD
+     EXPORT / TEILEN
      ========================= */
 
   const handleExport = async () => {
@@ -71,27 +83,33 @@ export default function ChancenblattAuswertung({
     const isMobile =
       /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-    // 📱 Mobile → echtes Share‑Sheet
-    if (
-      isMobile &&
-      navigator.canShare &&
-      navigator.canShare({ files: [file] })
-    ) {
-      await navigator.share({
-        files: [file],
-        title: pdfData.fileName,
-      });
-      return;
+    // 📱 Mobile → Share versuchen
+    if (isMobile && typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          files: [file],
+          title: pdfData.fileName,
+        });
+        return; // ✅ erfolgreich geteilt
+      } catch {
+        // ❌ Abbruch oder nicht unterstützt → Fallback Download
+      }
     }
 
-    // 🖥 Desktop → Download
+    // 🖥 Desktop ODER Fallback → Download
     const url = URL.createObjectURL(pdfData.blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = pdfData.fileName;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
+
+  /* =========================
+     RENDER
+     ========================= */
 
   return (
     <div
@@ -142,7 +160,6 @@ export default function ChancenblattAuswertung({
         onClick={handleExport}
         disabled={!pdfData}
         style={{
-          marginTop: 10,
           padding: "14px 28px",
           borderRadius: 999,
           background: OVB_BLUE,
@@ -153,7 +170,7 @@ export default function ChancenblattAuswertung({
           boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
         }}
       >
-        Ergebnis speichern
+        Ergebnis sichern
       </button>
 
       <style>{`
