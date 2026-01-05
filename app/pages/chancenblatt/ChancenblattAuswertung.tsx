@@ -43,6 +43,46 @@ export default function ChancenblattAuswertung({
     },
   }[type];
 
+  /* =========================
+     EXPORT + TEILEN / DOWNLOAD
+     ========================= */
+
+  const handleExport = async () => {
+    const { fileName, blob } = await exportChancenblattPDF(
+      type,
+      content,
+      answers
+    );
+
+    const file = new File([blob], fileName, {
+      type: "application/pdf",
+    });
+
+    const isMobile =
+      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    // 📱 Mobile → Share Sheet
+    if (
+      isMobile &&
+      navigator.canShare &&
+      navigator.canShare({ files: [file] })
+    ) {
+      await navigator.share({
+        files: [file],
+        title: fileName,
+      });
+      return;
+    }
+
+    // 🖥 Desktop → Download
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div
       style={{
@@ -89,7 +129,7 @@ export default function ChancenblattAuswertung({
       </p>
 
       <button
-        onClick={() => exportChancenblattPDF(type, content, answers)}
+        onClick={handleExport}
         style={{
           marginTop: 10,
           padding: "14px 28px",
