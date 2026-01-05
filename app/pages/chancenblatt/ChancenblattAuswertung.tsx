@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ErgebnisTyp } from "./ChancenblattFlow";
-import { exportChancenblattPDF } from "./ChancenblattExport";
+import NameDialog from "../kontaktbogen/NameDialog";
 
 const OVB_BLUE = "#013F72";
 
@@ -49,58 +49,56 @@ export default function ChancenblattAuswertung({
   }[type];
 
   /* =========================
-     PDF VORAB ERZEUGEN
+     NAME DIALOG STATE
      ========================= */
 
-  const [pdfData, setPdfData] = useState<{
-    fileName: string;
-    blob: Blob;
-  } | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-
-    exportChancenblattPDF(type, content, answers).then((data) => {
-      if (mounted) setPdfData(data);
-    });
-
-    return () => {
-      mounted = false;
-    };
-  }, [type]);
+  const [showNameDialog, setShowNameDialog] = useState(false);
+  const [kundenName, setKundenName] = useState("");
 
   /* =========================
-     EXPORT / TEILEN
+     EXPORT
      ========================= */
 
-  const handleExport = async () => {
-    if (!pdfData) return;
+  const confirmExport = async () => {
+    if (!kundenName.trim()) return;
 
-    const file = new File([pdfData.blob], pdfData.fileName, {
-      type: "application/pdf",
+    setShowNameDialog(false);
+
+    const res = await fetch("/api/pdf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "chancenblatt",
+        ergebnisTyp: type,
+        kundenName,
+        content,
+        answers,
+      }),
     });
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
 
     const isMobile =
       /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-    // 📱 Mobile → Share versuchen
+    // 📱 Mobile → Share (nur HTTPS!)
     if (isMobile && typeof navigator.share === "function") {
       try {
         await navigator.share({
-          files: [file],
-          title: pdfData.fileName,
+          url,
+          title: `Chancenblatt ${kundenName}`,
         });
-        return; // ✅ erfolgreich geteilt
+        return;
       } catch {
-        // ❌ Abbruch oder nicht unterstützt → Fallback Download
+        // Abbruch → Download
       }
     }
 
-    // 🖥 Desktop ODER Fallback → Download
-    const url = URL.createObjectURL(pdfData.blob);
+    // 🖥 Desktop / Fallback → Download
     const a = document.createElement("a");
     a.href = url;
-    a.download = pdfData.fileName;
+    a.download = `Chancenblatt-${kundenName}.pdf`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -112,73 +110,82 @@ export default function ChancenblattAuswertung({
      ========================= */
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        width: "90%",
-        maxWidth: "700px",
-        color: OVB_BLUE,
-        textAlign: "center",
-        animation: "fadeIn 0.4s ease",
-      }}
-    >
-      <h2
+    <>
+      <div
         style={{
-          fontSize: "clamp(18px, 2.4vw, 22px)",
-          marginBottom: "14px",
-          fontWeight: 600,
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: "90%",
+          maxWidth: "700px",
+          color: OVB_BLUE,
+          textAlign: "center",
+          animation: "fadeIn 0.4s ease",
         }}
       >
-        {content.title}
-      </h2>
+        <h2
+          style={{
+            fontSize: "clamp(18px, 2.4vw, 22px)",
+            marginBottom: "14px",
+            fontWeight: 600,
+          }}
+        >
+          {content.title}
+        </h2>
 
-      <p
-        style={{
-          marginBottom: "12px",
-          fontSize: "clamp(14px, 1.8vw, 16px)",
-          lineHeight: 1.5,
-        }}
-      >
-        {content.text}
-      </p>
+        <p
+          style={{
+            marginBottom: "12px",
+            fontSize: "clamp(14px, 1.8vw, 16px)",
+            lineHeight: 1.5,
+          }}
+        >
+          {content.text}
+        </p>
 
-      <p
-        style={{
-          marginBottom: "24px",
-          fontSize: "clamp(14px, 1.8vw, 16px)",
-          lineHeight: 1.5,
-          opacity: 0.95,
-        }}
-      >
-        {content.hint}
-      </p>
+        <p
+          style={{
+            marginBottom: "24px",
+            fontSize: "clamp(14px, 1.8vw, 16px)",
+            lineHeight: 1.5,
+            opacity: 0.95,
+          }}
+        >
+          {content.hint}
+        </p>
 
-      <button
-        onClick={handleExport}
-        disabled={!pdfData}
-        style={{
-          padding: "14px 28px",
-          borderRadius: 999,
-          background: OVB_BLUE,
-          color: "#fff",
-          border: "none",
-          cursor: pdfData ? "pointer" : "default",
-          opacity: pdfData ? 1 : 0.6,
-          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-        }}
-      >
-        Ergebnis sichern
-      </button>
+        <button
+          onClick={() => setShowNameDialog(true)}
+          style={{
+            padding: "14px 28px",
+            borderRadius: 999,
+            background: OVB_BLUE,
+            color: "#fff",
+            border: "none",
+            cursor: "pointer",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+          }}
+        >
+          Ergebnis sichern
+        </button>
 
-      <style>{`
-        @keyframes fadeIn {
-          0% { opacity: 0; transform: translate(-50%, -45%); }
-          100% { opacity: 1; transform: translate(-50%, -50%); }
-        }
-      `}</style>
-    </div>
+        <style>{`
+          @keyframes fadeIn {
+            0% { opacity: 0; transform: translate(-50%, -45%); }
+            100% { opacity: 1; transform: translate(-50%, -50%); }
+          }
+        `}</style>
+      </div>
+
+      {showNameDialog && (
+        <NameDialog
+          value={kundenName}
+          onChange={setKundenName}
+          onCancel={() => setShowNameDialog(false)}
+          onConfirm={confirmExport}
+        />
+      )}
+    </>
   );
 }

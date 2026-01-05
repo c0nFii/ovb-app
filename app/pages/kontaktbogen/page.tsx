@@ -4,7 +4,6 @@ import { useState } from "react";
 import AppScreenWrapper from "@/components/AppScreenWrapper";
 import TopBar from "@/components/layout/TopBar";
 import DrawingSVG from "@/components/presentation/DrawingSVG";
-import { exportEmpfehlungen } from "@/components/export/exportEmpfehlungen";
 import ExportArea from "@/components/export/ExportArea";
 import KontaktbogenForm from "./KontaktbogenForm";
 import NameDialog from "./NameDialog";
@@ -46,52 +45,56 @@ export default function KontaktbogenPage() {
   const handleSave = () => setShowNameDialog(true);
 
   /* =========================
-     EXPORT + SOFORT TEILEN
+     EXPORT (SERVER → URL)
      ========================= */
 
   const confirmExport = async () => {
-  if (!geberName.trim()) return;
+    if (!geberName.trim()) return;
 
-  setMode("normal");
-  setIsExporting(true);
+    setMode("normal");
+    setIsExporting(true);
 
-  const { fileName, blob } = await exportEmpfehlungen({
-    name: geberName,
-    empfehlungen: personen.filter((p) => p.name.trim() !== ""),
-  });
-
-  setIsExporting(false);
-  setShowNameDialog(false);
-
-  const file = new File([blob], fileName, {
-    type: "application/pdf",
-  });
-
-  const isMobile =
-    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-  // 📱 NUR Mobile → Share Sheet
-  if (
-    isMobile &&
-    navigator.canShare &&
-    navigator.canShare({ files: [file] })
-  ) {
-    await navigator.share({
-      files: [file],
-      title: fileName,
+    const res = await fetch("/api/pdf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "empfehlungen",
+        name: geberName,
+        empfehlungen: personen.filter((p) => p.name.trim() !== ""),
+      }),
     });
-    return;
-  }
 
-  // 🖥 Desktop → Download
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = fileName;
-  a.click();
-  URL.revokeObjectURL(url);
-};
+    setIsExporting(false);
+    setShowNameDialog(false);
 
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+
+    const isMobile =
+      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    // 📱 Mobile → Share (nur HTTPS!)
+    if (isMobile && typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          url,
+          title: `Empfehlungen ${geberName}`,
+        });
+        return;
+      } catch {
+        // Abbruch → Download
+      }
+    }
+
+    // 🖥 Desktop / Fallback → Download
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Empfehlungen-${geberName}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   /* =========================
      FORM UPDATE

@@ -49,7 +49,7 @@ export default function NameDialog({
             color: OVB_BLUE,
           }}
         >
-          Name des Empfehlungsgebers
+          Namen der Person eingeben
         </div>
 
         {!exportReady && (
