@@ -4,17 +4,6 @@ import { ErgebnisTyp } from "./ChancenblattFlow";
 
 const OVB_BLUE: [number, number, number] = [1, 63, 114];
 
-async function loadImageAsBase64(url: string): Promise<string> {
-  const res = await fetch(url);
-  const blob = await res.blob();
-
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.readAsDataURL(blob);
-  });
-}
-
 export async function exportChancenblattPDF(
   type: ErgebnisTyp,
   content: { title: string; text: string; hint: string },
@@ -23,27 +12,31 @@ export async function exportChancenblattPDF(
   const pdf = new jsPDF();
 
   /* =========================
-     LOGO
-  ========================== */
+     LOGO – EXAKT WIE KONTAKTBOGEN
+     ========================== */
 
-  const logoBase64 = await loadImageAsBase64("/ovb.png");
-  const imgProps = pdf.getImageProperties(logoBase64);
+  const logo = new Image();
+  logo.src = "/ovb.png";
+
+  await new Promise<void>((resolve) => {
+    logo.onload = () => resolve();
+  });
 
   const logoWidth = 28;
-  const logoHeight = (imgProps.height * logoWidth) / imgProps.width;
+  const logoHeight = (logo.height * logoWidth) / logo.width;
 
   const logoX = 20;
   const logoY = 20;
   const textX = logoX + logoWidth + 10;
   const textWidth = 190 - textX;
 
-  pdf.addImage(logoBase64, "PNG", logoX, logoY, logoWidth, logoHeight);
+  pdf.addImage(logo, "PNG", logoX, logoY, logoWidth, logoHeight);
 
   let y = logoY;
 
   /* =========================
      HEADER
-  ========================== */
+     ========================== */
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(18);
@@ -63,7 +56,7 @@ export async function exportChancenblattPDF(
 
   /* =========================
      FRAGEN
-  ========================== */
+     ========================== */
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(13);
@@ -99,15 +92,15 @@ export async function exportChancenblattPDF(
 
   /* =========================
      FOOTER
-  ========================== */
+     ========================== */
 
   pdf.setFontSize(9);
   pdf.setTextColor(120);
   pdf.text("Chancenblatt – persönliche Einschätzung", 20, 285);
 
   /* =========================
-     RETURN (WIE KONTAKTBOGEN)
-  ========================== */
+     RETURN
+     ========================== */
 
   const fileName = `Chancenblatt-${type}.pdf`;
   const blob = pdf.output("blob");
