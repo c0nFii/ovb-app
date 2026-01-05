@@ -50,44 +50,48 @@ export default function KontaktbogenPage() {
      ========================= */
 
   const confirmExport = async () => {
-    if (!geberName.trim()) return;
+  if (!geberName.trim()) return;
 
-    setMode("normal");
-    setIsExporting(true);
+  setMode("normal");
+  setIsExporting(true);
 
-    const { fileName, blob } = await exportEmpfehlungen({
-      name: geberName,
-      empfehlungen: personen.filter((p) => p.name.trim() !== ""),
-    });
-
-    setIsExporting(false);
-    setShowNameDialog(false);
-
-    const file = new File([blob], fileName, {
-      type: "application/pdf",
-    });
-
-    // 📱 iOS / Android → Share Sheet
-    if (
-  navigator.canShare &&
-  navigator.canShare({ files: [file] })
-) {
-  await navigator.share({
-    files: [file],
-    title: fileName,
+  const { fileName, blob } = await exportEmpfehlungen({
+    name: geberName,
+    empfehlungen: personen.filter((p) => p.name.trim() !== ""),
   });
-  return;
-}
 
+  setIsExporting(false);
+  setShowNameDialog(false);
 
-    // 🖥 Desktop → Download
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  const file = new File([blob], fileName, {
+    type: "application/pdf",
+  });
+
+  const isMobile =
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  // 📱 NUR Mobile → Share Sheet
+  if (
+    isMobile &&
+    navigator.canShare &&
+    navigator.canShare({ files: [file] })
+  ) {
+    await navigator.share({
+      files: [file],
+      title: fileName,
+    });
+    return;
+  }
+
+  // 🖥 Desktop → Download
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
 
   /* =========================
      FORM UPDATE
