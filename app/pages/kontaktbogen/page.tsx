@@ -68,13 +68,17 @@ export default function KontaktbogenPage() {
     });
 
     // 📱 iOS / Android → Share Sheet
-    if (navigator.share) {
-      await navigator.share({
-        files: [file],
-        title: fileName,
-      });
-      return;
-    }
+    if (
+  navigator.canShare &&
+  navigator.canShare({ files: [file] })
+) {
+  await navigator.share({
+    files: [file],
+    title: fileName,
+  });
+  return;
+}
+
 
     // 🖥 Desktop → Download
     const url = URL.createObjectURL(blob);
