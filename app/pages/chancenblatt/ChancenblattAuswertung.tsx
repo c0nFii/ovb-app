@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { ErgebnisTyp } from "./ChancenblattFlow";
 import { exportChancenblattPDF } from "./ChancenblattExport";
 
@@ -44,24 +45,33 @@ export default function ChancenblattAuswertung({
   }[type];
 
   /* =========================
-     EXPORT + TEILEN / DOWNLOAD
+     PDF VORAB ERZEUGEN
+     ========================= */
+
+  const [pdfData, setPdfData] = useState<{
+    fileName: string;
+    blob: Blob;
+  } | null>(null);
+
+  useEffect(() => {
+    exportChancenblattPDF(type, content, answers).then(setPdfData);
+  }, [type]);
+
+  /* =========================
+     NUR NOCH TEILEN / DOWNLOAD
      ========================= */
 
   const handleExport = async () => {
-    const { fileName, blob } = await exportChancenblattPDF(
-      type,
-      content,
-      answers
-    );
+    if (!pdfData) return;
 
-    const file = new File([blob], fileName, {
+    const file = new File([pdfData.blob], pdfData.fileName, {
       type: "application/pdf",
     });
 
     const isMobile =
       /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-    // 📱 Mobile → Share Sheet
+    // 📱 Mobile → echtes Share‑Sheet
     if (
       isMobile &&
       navigator.canShare &&
@@ -69,16 +79,16 @@ export default function ChancenblattAuswertung({
     ) {
       await navigator.share({
         files: [file],
-        title: fileName,
+        title: pdfData.fileName,
       });
       return;
     }
 
     // 🖥 Desktop → Download
-    const url = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(pdfData.blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = fileName;
+    a.download = pdfData.fileName;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -130,6 +140,7 @@ export default function ChancenblattAuswertung({
 
       <button
         onClick={handleExport}
+        disabled={!pdfData}
         style={{
           marginTop: 10,
           padding: "14px 28px",
@@ -137,7 +148,8 @@ export default function ChancenblattAuswertung({
           background: OVB_BLUE,
           color: "#fff",
           border: "none",
-          cursor: "pointer",
+          cursor: pdfData ? "pointer" : "default",
+          opacity: pdfData ? 1 : 0.6,
           boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
         }}
       >
