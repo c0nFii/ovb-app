@@ -1,0 +1,22 @@
+/* =========================================
+   KONTAKTBOGEN STAGE
+   identisch zu app-screen-inner,
+   aber mit Scroll-Fallback
+   ========================================= */
+
+.kontaktbogen-stage {
+  position: relative;
+
+  width: 100%;
+  height: 100%;
+
+  background: #ffffff;
+
+  /* 🔑 Unterschied zum AppScreen:
+     Scroll nur hier erlauben */
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  /* iOS / iPad Touch-Scroll */
+  -webkit-overflow-scrolling: touch;
+}
