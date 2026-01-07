@@ -30,36 +30,30 @@ export default function DrawingSVG({
     pt.x = e.clientX;
     pt.y = e.clientY;
 
-    const screenCTM = svg.getScreenCTM();
-    if (!screenCTM) return { x: 0, y: 0 };
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return { x: 0, y: 0 };
 
-    const local = pt.matrixTransform(screenCTM.inverse());
+    const local = pt.matrixTransform(ctm.inverse());
     return { x: local.x, y: local.y };
   };
 
   const isPointNearPath = (point: Point, path: Path, radius = 12) => {
-    const points = path.d
-      .split("L")
-      .map((cmd) =>
-        cmd
-          .replace("M", "")
-          .trim()
-          .split(" ")
-          .map(Number)
-      )
-      .map(([x, y]) => ({ x, y }));
+    const nums = path.d.match(/-?\d*\.?\d+/g);
+    if (!nums) return false;
 
-    return points.some((p) => distance(p, point) < radius);
+    for (let i = 0; i < nums.length; i += 2) {
+      const x = Number(nums[i]);
+      const y = Number(nums[i + 1]);
+      if (distance(point, { x, y }) < radius) return true;
+    }
+    return false;
   };
 
   const start = (e: React.PointerEvent<SVGSVGElement>) => {
-    if (!active) return;
-    if (e.pointerType !== "pen") return;
+    if (!active || e.pointerType !== "pen") return;
 
     e.preventDefault();
-    e.stopPropagation();
 
-    // 🔑 iPad: Pointer Capture
     e.currentTarget.setPointerCapture(e.pointerId);
 
     const p = getPoint(e);
@@ -73,16 +67,12 @@ export default function DrawingSVG({
   };
 
   const move = (e: React.PointerEvent<SVGSVGElement>) => {
-    if (!active) return;
-    if (e.pointerType !== "pen") return;
+    if (!active || e.pointerType !== "pen") return;
     if (!lastPoint.current) return;
 
     e.preventDefault();
-    e.stopPropagation();
 
     const p = getPoint(e);
-
-    // ✏️ iPad: sehr kleine Bewegungen filtern
     if (distance(p, lastPoint.current) < 1) return;
 
     lastPoint.current = p;
@@ -97,13 +87,10 @@ export default function DrawingSVG({
   };
 
   const end = (e: React.PointerEvent<SVGSVGElement>) => {
-    if (!active) return;
-    if (e.pointerType !== "pen") return;
+    if (!active || e.pointerType !== "pen") return;
 
     e.preventDefault();
-    e.stopPropagation();
 
-    // 🔑 Pointer Capture wieder freigeben
     if (e.currentTarget.hasPointerCapture(e.pointerId)) {
       e.currentTarget.releasePointerCapture(e.pointerId);
     }
@@ -124,18 +111,16 @@ export default function DrawingSVG({
       style={{
         position: "absolute",
         inset: 0,
-        width: "100%",
-        height: "100%",
-        zIndex: 9999,
 
-        // 🚨 KRITISCH für iPad
-        touchAction: "none",
+        // 🔑 NUR aktiv im Draw / Erase Modus
+        pointerEvents: active ? "auto" : "none",
+        touchAction: active ? "none" : "auto",
+        zIndex: active ? 9999 : -1,
       }}
-      onPointerDown={start}
-      onPointerMove={move}
-      onPointerUp={end}
-      onPointerCancel={end}
-      onPointerLeave={end}
+      onPointerDown={active ? start : undefined}
+      onPointerMove={active ? move : undefined}
+      onPointerUp={active ? end : undefined}
+      onPointerCancel={active ? end : undefined}
     >
       {paths.map((p, i) => (
         <path
