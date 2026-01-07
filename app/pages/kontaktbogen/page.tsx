@@ -7,6 +7,7 @@ import DrawingSVG from "@/components/presentation/DrawingSVG";
 import ExportArea from "@/components/export/ExportArea";
 import KontaktbogenForm from "./KontaktbogenForm";
 import NameDialog from "./NameDialog";
+import LaserPointer from "@/components/presentation/LaserPointer";
 
 import "./kontaktbogen.css";
 
@@ -116,10 +117,14 @@ export default function KontaktbogenPage() {
   return (
     <>
       <TopBar mode={mode} setMode={setMode} onSave={handleSave} />
-
+<LaserPointer mode={mode} />
       <AppScreenWrapper>
         <div className="kontaktbogen-stage">
-          <DrawingSVG mode={mode} />
+          <DrawingSVG
+  active={mode === "draw" || mode === "erase"}
+  erase={mode === "erase"}
+/>
+
 
           <KontaktbogenForm
             personen={personen.slice(startIndex, startIndex + 6)}
