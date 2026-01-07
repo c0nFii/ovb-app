@@ -11,24 +11,6 @@ function distance(a: Point, b: Point) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
-/**
- * Erlaubt:
- * - Android Stylus: pointerType === "pen"
- * - Apple Pencil: pointerType === "touch" + pressure > 0
- * Blockiert:
- * - Finger / Hand: pointerType === "touch" + pressure === 0
- */
-function isStylusPointer(e: React.PointerEvent) {
-  // Android / Windows Pen
-  if (e.pointerType === "pen") return true;
-
-  // Apple Pencil kommt als "touch", aber mit pressure > 0
-  if (e.pointerType === "touch" && e.pressure > 0) return true;
-
-  // Finger / Hand / alles andere blocken
-  return false;
-}
-
 export default function DrawingSVG({ mode }: { mode: Mode }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const lastPoint = useRef<Point | null>(null);
@@ -78,11 +60,11 @@ export default function DrawingSVG({ mode }: { mode: Mode }) {
   };
 
   /* ======================================================
-     START – STYLUS ERLAUBT, HAND BLOCKIERT
+     START – NUR STYLUS
      ====================================================== */
 
   const start = (e: React.PointerEvent) => {
-    if (!isStylusPointer(e)) return;
+    if (e.pointerType !== "pen") return;
     if (mode !== "draw" && mode !== "erase") return;
 
     e.preventDefault();
@@ -103,11 +85,11 @@ export default function DrawingSVG({ mode }: { mode: Mode }) {
   };
 
   /* ======================================================
-     MOVE – STYLUS ERLAUBT, HAND BLOCKIERT
+     MOVE
      ====================================================== */
 
   const move = (e: React.PointerEvent) => {
-    if (!isStylusPointer(e)) return;
+    if (e.pointerType !== "pen") return;
     if (!lastPoint.current) return;
 
     e.preventDefault();
@@ -132,11 +114,11 @@ export default function DrawingSVG({ mode }: { mode: Mode }) {
   };
 
   /* ======================================================
-     END – STYLUS ERLAUBT, HAND BLOCKIERT
+     END
      ====================================================== */
 
   const end = (e: React.PointerEvent) => {
-    if (!isStylusPointer(e)) return;
+    if (e.pointerType !== "pen") return;
 
     if (mode === "draw" && currentPath) {
       setPaths((p) => [...p, currentPath]);
@@ -177,7 +159,7 @@ export default function DrawingSVG({ mode }: { mode: Mode }) {
           d={p.d}
           fill="none"
           stroke="#002b5c"
-          strokeWidth={4}
+          strokeWidth={4}          
           strokeLinecap="round"
           strokeLinejoin="round"
           vectorEffect="non-scaling-stroke"
@@ -189,7 +171,7 @@ export default function DrawingSVG({ mode }: { mode: Mode }) {
           d={currentPath.d}
           fill="none"
           stroke="#002b5c"
-          strokeWidth={4}
+          strokeWidth={4}          
           strokeLinecap="round"
           strokeLinejoin="round"
           vectorEffect="non-scaling-stroke"
