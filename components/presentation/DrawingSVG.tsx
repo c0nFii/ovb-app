@@ -117,7 +117,7 @@ export default function DrawingSVG({
         width: "100%",
         height: "100%",
         zIndex: 9999,
-        touchAction: "none",
+        touchAction: "pinch-zoom",
       }}
       onPointerDown={start}
       onPointerMove={move}
