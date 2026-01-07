@@ -8,6 +8,7 @@ import ExportArea from "@/components/export/ExportArea";
 import FlowController from "./FlowController"; // 👈 WICHTIG
 
 import { useState } from "react";
+import DrawingOverlay from "@/components/presentation/DrawingOverlay";
 
 export default function FinanziellerLebensplanPage() {
   const [mode, setMode] =
@@ -31,9 +32,14 @@ export default function FinanziellerLebensplanPage() {
         >
           <LaserPointer mode={mode} />
 
-          <ExportArea>
-            <DrawingSVG mode={mode} />
-          </ExportArea>
+          <DrawingOverlay active={mode === "draw" || mode === "erase"}>
+  <DrawingSVG
+    active={mode === "draw" || mode === "erase"}
+    erase={mode === "erase"}
+  />
+</DrawingOverlay>
+
+
 
           {/* 👇 HIER läuft jetzt der komplette Präsentations‑Flow */}
           <FlowController />

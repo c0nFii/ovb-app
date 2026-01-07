@@ -49,7 +49,7 @@ export default function EmpfehlungFlow() {
   // wichtig.png → nach 2s pulsieren
   useEffect(() => {
     if (step === sequence.length) {
-      const t = setTimeout(() => setShowWichtigButton(true), 2000);
+      const t = setTimeout(() => setShowWichtigButton(true), 1500);
       return () => clearTimeout(t);
     }
   }, [step]);
@@ -157,7 +157,7 @@ export default function EmpfehlungFlow() {
             transform: translate(-50%, -50%) scale(1);
           }
           50% {
-            transform: translate(-50%, -50%) scale(1.01);
+            transform: translate(-50%, -50%) scale(1.02);
           }
           100% {
             transform: translate(-50%, -50%) scale(1);

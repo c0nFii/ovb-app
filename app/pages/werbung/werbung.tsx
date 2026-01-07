@@ -5,7 +5,6 @@ import Image from "next/image";
 
 import DrawingSVG from "@/components/presentation/DrawingSVG";
 import LaserPointer from "@/components/presentation/LaserPointer";
-import ExportArea from "@/components/export/ExportArea";
 import PulseCircle from "@/components/presentation/PulseCircle";
 
 export default function WerbungFlow({ mode }: { mode: any }) {
@@ -28,7 +27,7 @@ export default function WerbungFlow({ mode }: { mode: any }) {
 
   const handleRingClick = () => {
     setShowRing(false);
-    setStep(s => s + 1);
+    setStep((s) => s + 1);
   };
 
   const wipeStyle = (isNew: boolean): React.CSSProperties => ({
@@ -39,15 +38,12 @@ export default function WerbungFlow({ mode }: { mode: any }) {
 
   return (
     <>
-      {/* ===== IDENTISCH ZU GRUNDSKEL ===== */}
+      {/* ===== LASER + ZEICHNEN (MUSS ÜBER ALLEM SEIN) ===== */}
+      <LaserPointer mode={mode} />
+
+
+      {/* ===== BILDERBEREICH (DARF pointerEvents: none HABEN) ===== */}
       <div style={{ pointerEvents: "none" }}>
-        <LaserPointer mode={mode} />
-
-        <ExportArea>
-          <DrawingSVG mode={mode} />
-        </ExportArea>
-
-        {/* ===== BILDBEREICH ===== */}
         <div
           style={{
             position: "absolute",
@@ -77,7 +73,7 @@ export default function WerbungFlow({ mode }: { mode: any }) {
           )}
 
           {step >= 3 &&
-            group200.map(img => (
+            group200.map((img) => (
               <div key={img} style={{ position: "absolute", inset: 0 }}>
                 <Image src={`/pictures/${img}`} alt="" fill style={wipeStyle(step === 3)} />
               </div>
@@ -90,7 +86,7 @@ export default function WerbungFlow({ mode }: { mode: any }) {
           )}
 
           {step >= 5 &&
-            groupX.map(img => (
+            groupX.map((img) => (
               <div key={img} style={{ position: "absolute", inset: 0 }}>
                 <Image src={`/pictures/${img}`} alt="" fill style={wipeStyle(step === 5)} />
               </div>
@@ -107,7 +103,7 @@ export default function WerbungFlow({ mode }: { mode: any }) {
             top: "40%",
             left: "80%",
             transform: "translateY(-50%)",
-            zIndex: 9999,
+            zIndex: 100,
             pointerEvents: "auto",
           }}
         />
@@ -115,8 +111,12 @@ export default function WerbungFlow({ mode }: { mode: any }) {
 
       <style jsx>{`
         @keyframes wipeIn {
-          from { clip-path: inset(0 0 100% 0); }
-          to   { clip-path: inset(0 0 0 0); }
+          from {
+            clip-path: inset(0 0 100% 0);
+          }
+          to {
+            clip-path: inset(0 0 0 0);
+          }
         }
       `}</style>
     </>

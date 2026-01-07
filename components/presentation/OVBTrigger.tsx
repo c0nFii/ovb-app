@@ -23,7 +23,7 @@ export default function OVBTrigger({ onClick }: { onClick: () => void }) {
 
         color: "#002b5c",
         cursor: "pointer",
-        zIndex: 60,
+        zIndex: 100,
         animation: "blink 1.2s infinite",
       }}
     >

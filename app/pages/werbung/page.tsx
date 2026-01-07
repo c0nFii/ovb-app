@@ -6,6 +6,9 @@ import TopBar from "@/components/layout/TopBar";
 import PulseCircle from "@/components/presentation/PulseCircle";
 import GrundSkel from "./grundskel";
 import WerbungFlow from "./werbung";
+import DrawingOverlay from "@/components/presentation/DrawingOverlay";
+import DrawingSVG from "@/components/presentation/DrawingSVG";
+import LaserPointer from "@/components/presentation/LaserPointer";
 
 export default function WerbungPage() {
   const [started, setStarted] = useState(false);
@@ -23,6 +26,16 @@ export default function WerbungPage() {
       <TopBar mode={mode} setMode={setMode} />
 
       <AppScreenWrapper>
+
+        {/* 🔥 EINZIGES globales SVG */}
+        <LaserPointer mode={mode} />
+
+        <DrawingOverlay active={mode === "draw" || mode === "erase"}>
+          <DrawingSVG
+            active={mode === "draw" || mode === "erase"}
+            erase={mode === "erase"}
+          />
+        </DrawingOverlay>
 
         {!started && (
           <PulseCircle
@@ -45,7 +58,6 @@ export default function WerbungPage() {
           />
         )}
 
-        {/* 🔥 KEINE EXTRA-HÜLLE */}
         {showWerbung && <WerbungFlow mode={mode} />}
 
       </AppScreenWrapper>

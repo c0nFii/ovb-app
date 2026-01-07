@@ -5,6 +5,7 @@ import AppScreenWrapper from "@/components/AppScreenWrapper";
 import DrawingSVG from "@/components/presentation/DrawingSVG";
 import LaserPointer from "@/components/presentation/LaserPointer";
 import ExportArea from "@/components/export/ExportArea";
+import DrawingOverlay from "@/components/presentation/DrawingOverlay";
 
 import FlowController from "./FlowController";
 import AnalyseErklärung from "./AnalyseErklaerung";
@@ -39,9 +40,13 @@ export default function ABSPage() {
         >
           <LaserPointer mode={mode} />
 
-          <ExportArea>
-            <DrawingSVG mode={mode} />
-          </ExportArea>
+          <DrawingOverlay active={mode === "draw" || mode === "erase"}>
+  <DrawingSVG
+    active={mode === "draw" || mode === "erase"}
+    erase={mode === "erase"}
+  />
+</DrawingOverlay>
+
 
           {/* STEP 1 – FlowController */}
           {!showAnalyse && !showBeratung && !showService && (

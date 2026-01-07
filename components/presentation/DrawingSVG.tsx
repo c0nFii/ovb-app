@@ -2,8 +2,6 @@
 
 import { useRef, useState } from "react";
 
-type Mode = "normal" | "draw" | "erase" | "laser";
-
 type Path = { d: string };
 type Point = { x: number; y: number };
 
@@ -11,21 +9,22 @@ function distance(a: Point, b: Point) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
-export default function DrawingSVG({ mode }: { mode: Mode }) {
+export default function DrawingSVG({
+  active,
+  erase,
+}: {
+  active: boolean;
+  erase: boolean;
+}) {
   const svgRef = useRef<SVGSVGElement>(null);
   const lastPoint = useRef<Point | null>(null);
 
   const [paths, setPaths] = useState<Path[]>([]);
   const [currentPath, setCurrentPath] = useState<Path | null>(null);
 
-  /* ======================================================
-     KOORDINATEN – SVG-RAUM, TRANSFORM-SICHER
-     ====================================================== */
-
   const getPoint = (e: React.PointerEvent): Point => {
     const svg = svgRef.current!;
     const pt = svg.createSVGPoint();
-
     pt.x = e.clientX;
     pt.y = e.clientY;
 
@@ -36,15 +35,7 @@ export default function DrawingSVG({ mode }: { mode: Mode }) {
     return { x: local.x, y: local.y };
   };
 
-  /* ======================================================
-     HIT-TEST – RADIERER
-     ====================================================== */
-
-  const isPointNearPath = (
-    point: Point,
-    path: Path,
-    radius = 12
-  ) => {
+  const isPointNearPath = (point: Point, path: Path, radius = 12) => {
     const points = path.d
       .split("L")
       .map((cmd) =>
@@ -59,13 +50,9 @@ export default function DrawingSVG({ mode }: { mode: Mode }) {
     return points.some((p) => distance(p, point) < radius);
   };
 
-  /* ======================================================
-     START – NUR STYLUS
-     ====================================================== */
-
   const start = (e: React.PointerEvent) => {
+    if (!active) return;
     if (e.pointerType !== "pen") return;
-    if (mode !== "draw" && mode !== "erase") return;
 
     e.preventDefault();
     e.stopPropagation();
@@ -73,22 +60,17 @@ export default function DrawingSVG({ mode }: { mode: Mode }) {
     const p = getPoint(e);
     lastPoint.current = p;
 
-    if (mode === "draw") {
+    if (!erase) {
+      // ✏️ Zeichnen
       setCurrentPath({ d: `M ${p.x} ${p.y}` });
-    }
-
-    if (mode === "erase") {
-      setPaths((prev) =>
-        prev.filter((path) => !isPointNearPath(p, path))
-      );
+    } else {
+      // 🧽 Radieren
+      setPaths((prev) => prev.filter((path) => !isPointNearPath(p, path)));
     }
   };
 
-  /* ======================================================
-     MOVE
-     ====================================================== */
-
   const move = (e: React.PointerEvent) => {
+    if (!active) return;
     if (e.pointerType !== "pen") return;
     if (!lastPoint.current) return;
 
@@ -100,37 +82,29 @@ export default function DrawingSVG({ mode }: { mode: Mode }) {
 
     lastPoint.current = p;
 
-    if (mode === "draw") {
+    if (!erase) {
+      // ✏️ Zeichnen
       setCurrentPath((prev) =>
         prev ? { d: `${prev.d} L ${p.x} ${p.y}` } : null
       );
-    }
-
-    if (mode === "erase") {
-      setPaths((prev) =>
-        prev.filter((path) => !isPointNearPath(p, path))
-      );
+    } else {
+      // 🧽 Radieren
+      setPaths((prev) => prev.filter((path) => !isPointNearPath(p, path)));
     }
   };
 
-  /* ======================================================
-     END
-     ====================================================== */
-
   const end = (e: React.PointerEvent) => {
+    if (!active) return;
     if (e.pointerType !== "pen") return;
 
-    if (mode === "draw" && currentPath) {
+    if (!erase && currentPath) {
+      // ✏️ Zeichnen abschließen
       setPaths((p) => [...p, currentPath]);
     }
 
     lastPoint.current = null;
     setCurrentPath(null);
   };
-
-  /* ======================================================
-     RENDER
-     ====================================================== */
 
   return (
     <svg
@@ -144,8 +118,6 @@ export default function DrawingSVG({ mode }: { mode: Mode }) {
         height: "100%",
         zIndex: 9999,
         touchAction: "none",
-        pointerEvents:
-          mode === "draw" || mode === "erase" ? "auto" : "none",
       }}
       onPointerDown={start}
       onPointerMove={move}
@@ -159,19 +131,19 @@ export default function DrawingSVG({ mode }: { mode: Mode }) {
           d={p.d}
           fill="none"
           stroke="#002b5c"
-          strokeWidth={4}          
+          strokeWidth={4}
           strokeLinecap="round"
           strokeLinejoin="round"
           vectorEffect="non-scaling-stroke"
         />
       ))}
 
-      {currentPath && (
+      {currentPath && !erase && (
         <path
           d={currentPath.d}
           fill="none"
           stroke="#002b5c"
-          strokeWidth={4}          
+          strokeWidth={4}
           strokeLinecap="round"
           strokeLinejoin="round"
           vectorEffect="non-scaling-stroke"

@@ -5,6 +5,8 @@ import AppScreenWrapper from "@/components/AppScreenWrapper";
 import TopBar from "@/components/layout/TopBar";
 import DrawingSVG from "@/components/presentation/DrawingSVG";
 import ChancenblattFlow from "./ChancenblattFlow";
+import DrawingOverlay from "@/components/presentation/DrawingOverlay";
+import LaserPointer from "@/components/presentation/LaserPointer";
 
 const OVB_BLUE = "#013F72";
 
@@ -18,7 +20,14 @@ export default function ChancenblattPage() {
       <TopBar mode={mode} setMode={setMode} />
 
       <AppScreenWrapper>
-        <DrawingSVG mode={mode} />
+<LaserPointer mode={mode} />
+
+        <DrawingOverlay active={mode === "draw" || mode === "erase"}>
+          <DrawingSVG
+            active={mode === "draw" || mode === "erase"}
+            erase={mode === "erase"}
+          />
+        </DrawingOverlay>
 
         {!started && (
           <div

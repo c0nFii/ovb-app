@@ -27,7 +27,7 @@ export default function OVBHints({ side }: OVBHintsProps) {
 
         fontSize: "clamp(20px, 3vw, 32px)",
         color: "#002b5c",
-        zIndex: 80,
+        zIndex: 100,
       }}
     >
       <span

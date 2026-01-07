@@ -5,8 +5,8 @@ import Image from "next/image";
 
 import DrawingSVG from "@/components/presentation/DrawingSVG";
 import LaserPointer from "@/components/presentation/LaserPointer";
-import ExportArea from "@/components/export/ExportArea";
 import PulseCircle from "@/components/presentation/PulseCircle";
+
 
 export default function GrundSkel({
   mode,
@@ -54,25 +54,18 @@ export default function GrundSkel({
     }
   }, [step]);
 
-  // 🔥 EINZIGE NEUE FUNKTION
   const handleRingClick = () => {
-    setShowRing(false); // Ring sofort ausblenden
-    onFinish();         // bestehender Flow
+    setShowRing(false);
+    onFinish();
   };
 
   return (
     <>
-      {/* ===== NICHT KLICKBARER LAYER ===== */}
+      {/* ===== SVG & LASER — IMMER OBEN, NIE TRANSFORMIERT ===== */}
+      <LaserPointer mode={mode} />
+
+      {/* ===== BILDERBEREICH — DARF TRANSFORMIERT WERDEN ===== */}
       <div style={{ pointerEvents: "none" }}>
-        {/* LaserPointer */}
-        <LaserPointer mode={mode} />
-
-        {/* ExportArea */}
-        <ExportArea>
-          <DrawingSVG mode={mode} />
-        </ExportArea>
-
-        {/* Bildbereich */}
         <div
           style={{
             position: "absolute",
@@ -85,13 +78,7 @@ export default function GrundSkel({
         >
           {sequence.map((img, i) =>
             step >= i ? (
-              <div
-                key={img}
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                }}
-              >
+              <div key={img} style={{ position: "absolute", inset: 0 }}>
                 <Image
                   src={`/pictures/${img}`}
                   alt=""
@@ -110,13 +97,7 @@ export default function GrundSkel({
 
           {step > sequence.length &&
             groupImages.map((img) => (
-              <div
-                key={img}
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                }}
-              >
+              <div key={img} style={{ position: "absolute", inset: 0 }}>
                 <Image
                   src={`/pictures/${img}`}
                   alt=""
@@ -132,7 +113,7 @@ export default function GrundSkel({
         </div>
       </div>
 
-      {/* ===== KLICKBARER RING (AUSSERHALB!) ===== */}
+      {/* ===== RING ===== */}
       {showRing && (
         <PulseCircle
           onClick={handleRingClick}

@@ -9,6 +9,7 @@ import PulseCircle from "@/components/presentation/PulseCircle";
 import ImageSequence from "@/components/presentation/ImageSequence";
 import DrawingSVG from "@/components/presentation/DrawingSVG";
 import LaserPointer from "@/components/presentation/LaserPointer";
+import DrawingOverlay from "@/components/presentation/DrawingOverlay";
 
 import ExportArea from "@/components/export/ExportArea";
 import OVBHints from "@/components/presentation/OVBHints";
@@ -116,9 +117,14 @@ export default function KapitalmarktPage() {
 
           {started && (
             <>
-              <ExportArea>
-                <DrawingSVG mode={mode} />
-              </ExportArea>
+              <DrawingOverlay active={mode === "draw" || mode === "erase"}>
+  <DrawingSVG
+    active={mode === "draw" || mode === "erase"}
+    erase={mode === "erase"}
+  />
+</DrawingOverlay>
+
+
 
               {/* 🔥 OVB‑HINTS – NUR BEIM LETZTEN BILD */}
               {isLastImage && (
@@ -135,7 +141,7 @@ export default function KapitalmarktPage() {
       fontSize: "clamp(32px, 5vw, 48px)",
       color: "#002b5c",
       cursor: "pointer",
-      zIndex: 90,
+      zIndex: 100,
     }}
   >
     ⚠️
@@ -155,7 +161,7 @@ export default function KapitalmarktPage() {
       fontSize: "clamp(32px, 5vw, 48px)",
       color: "#002b5c",
       cursor: "pointer",
-      zIndex: 90,
+      zIndex: 100,
     }}
   >
     ⚠️
@@ -175,7 +181,7 @@ export default function KapitalmarktPage() {
                     position: "absolute",
                     inset: 0,
                     margin: "auto",
-                    zIndex: 50,
+                    zIndex: 100,
                   }}
                 />
               )}
