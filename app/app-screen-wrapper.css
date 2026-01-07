@@ -27,6 +27,7 @@ body {
 .app-screen {
   position: fixed;
   inset: 0;
+  forced-color-adjust: none;
 
   /* kein vw/vh → Android-safe */
   width: 100%;
@@ -47,4 +48,5 @@ body {
   width: 100%;
   height: 100%;
   background-color: #ffffff !important;
+  forced-color-adjust: none;
 }
