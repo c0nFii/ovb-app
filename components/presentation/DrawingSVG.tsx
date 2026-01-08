@@ -1,26 +1,50 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { usePen } from "../layout/PenContext";
 
-type Path = { d: string };
+/* =========================
+   TYPES
+   ========================= */
+
+export type Path = {
+  d: string;
+  color: string;
+  width: number;
+};
+
 type Point = { x: number; y: number };
 
 function distance(a: Point, b: Point) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
+/* =========================
+   COMPONENT
+   ========================= */
+
 export default function DrawingSVG({
   active,
   erase,
+  paths,
+  setPaths,
 }: {
   active: boolean;
   erase: boolean;
+  paths: Path[];
+  setPaths: React.Dispatch<React.SetStateAction<Path[]>>;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const lastPoint = useRef<Point | null>(null);
 
-  const [paths, setPaths] = useState<Path[]>([]);
   const [currentPath, setCurrentPath] = useState<Path | null>(null);
+
+  // 🔥 Globaler Pen
+  const { color, width } = usePen();
+
+  /* =========================
+     HELPERS
+     ========================= */
 
   const getPoint = (e: React.PointerEvent): Point => {
     const svg = svgRef.current;
@@ -30,47 +54,61 @@ export default function DrawingSVG({
     pt.x = e.clientX;
     pt.y = e.clientY;
 
-    const ctm = svg.getScreenCTM();
-    if (!ctm) return { x: 0, y: 0 };
+    const screenCTM = svg.getScreenCTM();
+    if (!screenCTM) return { x: 0, y: 0 };
 
-    const local = pt.matrixTransform(ctm.inverse());
+    const local = pt.matrixTransform(screenCTM.inverse());
     return { x: local.x, y: local.y };
   };
 
   const isPointNearPath = (point: Point, path: Path, radius = 12) => {
-    const nums = path.d.match(/-?\d*\.?\d+/g);
-    if (!nums) return false;
+    const points = path.d
+      .split("L")
+      .map((cmd) =>
+        cmd
+          .replace("M", "")
+          .trim()
+          .split(" ")
+          .map(Number)
+      )
+      .map(([x, y]) => ({ x, y }));
 
-    for (let i = 0; i < nums.length; i += 2) {
-      const x = Number(nums[i]);
-      const y = Number(nums[i + 1]);
-      if (distance(point, { x, y }) < radius) return true;
-    }
-    return false;
+    return points.some((p) => distance(p, point) < radius);
   };
 
+  /* =========================
+     POINTER EVENTS
+     ========================= */
+
   const start = (e: React.PointerEvent<SVGSVGElement>) => {
-    if (!active || e.pointerType !== "pen") return;
+    if (!active) return;
+    if (e.pointerType !== "pen") return;
 
     e.preventDefault();
-
+    e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
 
     const p = getPoint(e);
     lastPoint.current = p;
 
     if (!erase) {
-      setCurrentPath({ d: `M ${p.x} ${p.y}` });
+      setCurrentPath({
+        d: `M ${p.x} ${p.y}`,
+        color,
+        width,
+      });
     } else {
       setPaths((prev) => prev.filter((path) => !isPointNearPath(p, path)));
     }
   };
 
   const move = (e: React.PointerEvent<SVGSVGElement>) => {
-    if (!active || e.pointerType !== "pen") return;
+    if (!active) return;
+    if (e.pointerType !== "pen") return;
     if (!lastPoint.current) return;
 
     e.preventDefault();
+    e.stopPropagation();
 
     const p = getPoint(e);
     if (distance(p, lastPoint.current) < 1) return;
@@ -79,7 +117,7 @@ export default function DrawingSVG({
 
     if (!erase) {
       setCurrentPath((prev) =>
-        prev ? { d: `${prev.d} L ${p.x} ${p.y}` } : prev
+        prev ? { ...prev, d: `${prev.d} L ${p.x} ${p.y}` } : prev
       );
     } else {
       setPaths((prev) => prev.filter((path) => !isPointNearPath(p, path)));
@@ -87,21 +125,27 @@ export default function DrawingSVG({
   };
 
   const end = (e: React.PointerEvent<SVGSVGElement>) => {
-    if (!active || e.pointerType !== "pen") return;
+    if (!active) return;
+    if (e.pointerType !== "pen") return;
 
     e.preventDefault();
+    e.stopPropagation();
 
     if (e.currentTarget.hasPointerCapture(e.pointerId)) {
       e.currentTarget.releasePointerCapture(e.pointerId);
     }
 
     if (!erase && currentPath) {
-      setPaths((p) => [...p, currentPath]);
+      setPaths((prev) => [...prev, currentPath]);
     }
 
     lastPoint.current = null;
     setCurrentPath(null);
   };
+
+  /* =========================
+     RENDER
+     ========================= */
 
   return (
     <svg
@@ -111,24 +155,24 @@ export default function DrawingSVG({
       style={{
         position: "absolute",
         inset: 0,
-
-        // 🔑 NUR aktiv im Draw / Erase Modus
-        pointerEvents: active ? "auto" : "none",
-        touchAction: active ? "none" : "auto",
-        zIndex: active ? 9999 : -1,
+        width: "100%",
+        height: "100%",
+        zIndex: 9999,
+        touchAction: "none",
       }}
-      onPointerDown={active ? start : undefined}
-      onPointerMove={active ? move : undefined}
-      onPointerUp={active ? end : undefined}
-      onPointerCancel={active ? end : undefined}
+      onPointerDown={start}
+      onPointerMove={move}
+      onPointerUp={end}
+      onPointerCancel={end}
+      onPointerLeave={end}
     >
       {paths.map((p, i) => (
         <path
           key={i}
           d={p.d}
           fill="none"
-          stroke="#002b5c"
-          strokeWidth={4}
+          stroke={p.color}
+          strokeWidth={p.width}
           strokeLinecap="round"
           strokeLinejoin="round"
           vectorEffect="non-scaling-stroke"
@@ -139,8 +183,8 @@ export default function DrawingSVG({
         <path
           d={currentPath.d}
           fill="none"
-          stroke="#002b5c"
-          strokeWidth={4}
+          stroke={currentPath.color}
+          strokeWidth={currentPath.width}
           strokeLinecap="round"
           strokeLinejoin="round"
           vectorEffect="non-scaling-stroke"

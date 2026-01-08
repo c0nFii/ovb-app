@@ -9,12 +9,13 @@ import WerbungFlow from "./werbung";
 import DrawingOverlay from "@/components/presentation/DrawingOverlay";
 import DrawingSVG from "@/components/presentation/DrawingSVG";
 import LaserPointer from "@/components/presentation/LaserPointer";
+import { Path } from "@/components/presentation/DrawingSVG";
 
 export default function WerbungPage() {
   const [started, setStarted] = useState(false);
   const [mode, setMode] =
     useState<"normal" | "draw" | "erase" | "laser">("normal");
-
+const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
   const [showWerbung, setShowWerbung] = useState(false);
 
   const handleFinish = () => {
@@ -31,11 +32,14 @@ export default function WerbungPage() {
         <LaserPointer mode={mode} />
 
         <DrawingOverlay active={mode === "draw" || mode === "erase"}>
-          <DrawingSVG
-            active={mode === "draw" || mode === "erase"}
-            erase={mode === "erase"}
-          />
-        </DrawingOverlay>
+  <DrawingSVG
+    active={mode === "draw" || mode === "erase"}
+    erase={mode === "erase"}
+    paths={drawingPaths}
+    setPaths={setDrawingPaths}
+  />
+</DrawingOverlay>
+
 
         {!started && (
           <PulseCircle

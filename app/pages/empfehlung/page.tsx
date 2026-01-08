@@ -8,12 +8,12 @@ import EmpfehlungFlow from "./EmpfehlungFlow";
 import DrawingSVG from "@/components/presentation/DrawingSVG";
 import DrawingOverlay from "@/components/presentation/DrawingOverlay";
 import LaserPointer from "@/components/presentation/LaserPointer";
-
+import { Path } from "@/components/presentation/DrawingSVG";
 export default function EmpfehlungPage() {
   const [started, setStarted] = useState(false);
   const [mode, setMode] =
     useState<"normal" | "draw" | "erase" | "laser">("normal");
-
+const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
   return (
     <>
       <TopBar mode={mode} setMode={setMode} />
@@ -27,8 +27,11 @@ export default function EmpfehlungPage() {
   <DrawingSVG
     active={mode === "draw" || mode === "erase"}
     erase={mode === "erase"}
+    paths={drawingPaths}
+    setPaths={setDrawingPaths}
   />
 </DrawingOverlay>
+
 
 
         {/* ===== STARTKREIS ===== */}

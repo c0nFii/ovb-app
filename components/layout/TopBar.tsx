@@ -1,8 +1,12 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
+import PenOptionsPopover from "./PenOptionsPopover";
 import { PresentationMode } from "@/app/types/presentation";
+import { usePen } from "./PenContext";
 
 export default function TopBar({
   mode,
@@ -14,6 +18,12 @@ export default function TopBar({
   onSave?: () => void;
 }) {
   const pathname = usePathname();
+
+  // 🔥 Globaler Pen-State
+  const { color, width, setColor, setWidth } = usePen();
+
+  // 🔥 Popover State
+  const [showPenOptions, setShowPenOptions] = useState(false);
 
   const nextPageMap: Record<string, string | null> = {
     "/": "/pages/kapitalmarkt",
@@ -46,9 +56,9 @@ export default function TopBar({
           color: "#002b5c",
         }}
       >
-        {/* LINKS: Home */}
+        {/* LINKS */}
         <div style={{ display: "flex", justifyContent: "flex-start" }}>
-          <a href="/">
+          <Link href="/">
             <Image
               src="/home-icon.png"
               alt="Startseite"
@@ -56,36 +66,109 @@ export default function TopBar({
               height={60}
               className="cursor-pointer transition-transform hover:scale-110"
             />
-          </a>
+          </Link>
         </div>
 
-        {/* MITTE: Tools */}
+        {/* MITTE — Tools */}
         <div style={{ display: "flex", gap: 16, justifyContent: "center" }}>
-          <Tool icon="/icons/stift.png" active={mode === "draw"} onClick={() => setMode("draw")} />
-          <Tool icon="/icons/radierer.png" active={mode === "erase"} onClick={() => setMode("erase")} />
-          <Tool icon="/icons/laserpointer.png" active={mode === "laser"} onClick={() => setMode("laser")} />
-          <Tool icon="/icons/normalmodus.png" active={mode === "normal"} onClick={() => setMode("normal")} />
+          {/* ✏️ Stift */}
+          <Tool
+            icon="/icons/stift.png"
+            active={mode === "draw"}
+            onClick={() => {
+              if (mode === "draw") {
+                setShowPenOptions((v) => !v);
+              } else {
+                setMode("draw");
+                setShowPenOptions(false);
+              }
+            }}
+          />
+
+          <Tool
+            icon="/icons/radierer.png"
+            active={mode === "erase"}
+            onClick={() => {
+              setMode("erase");
+              setShowPenOptions(false);
+            }}
+          />
+
+          <Tool
+            icon="/icons/laserpointer.png"
+            active={mode === "laser"}
+            onClick={() => {
+              setMode("laser");
+              setShowPenOptions(false);
+            }}
+          />
+
+          <Tool
+            icon="/icons/normalmodus.png"
+            active={mode === "normal"}
+            onClick={() => {
+              setMode("normal");
+              setShowPenOptions(false);
+            }}
+          />
 
           {onSave && <Tool icon="/icons/save.png" onClick={onSave} />}
         </div>
 
-        {/* RECHTS: Navigation */}
+        {/* RECHTS */}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 16 }}>
-          <NavIcon src="/icons/arrow-left.png" onClick={() => window.history.back()} />
-          <NavIcon src="/icons/refresh-icon.png" onClick={() => window.location.reload()} />
+          <NavIcon
+            src="/icons/arrow-left.png"
+            onClick={() => window.history.back()}
+          />
+          <NavIcon
+            src="/icons/refresh-icon.png"
+            onClick={() => window.location.reload()}
+          />
 
           {nextPage && (
-            <a href={nextPage}>
-              <Image src="/icons/arrow-right.png" alt="Weiter" width={50} height={50} />
-            </a>
+            <Link href={nextPage}>
+              <Image
+                src="/icons/arrow-right.png"
+                alt="Weiter"
+                width={50}
+                height={50}
+              />
+            </Link>
           )}
         </div>
       </div>
+
+      {/* 🔥 PEN OPTIONS POPOVER */}
+      {showPenOptions && (
+        <PenOptionsPopover
+          currentColor={color}
+          currentWidth={width}
+          onSelect={(c, w) => {
+            setColor(c);
+            setWidth(w);
+            setShowPenOptions(false);
+          }}
+          onClose={() => setShowPenOptions(false)}
+        />
+      )}
     </div>
   );
 }
 
-function Tool({ icon, active, onClick }: { icon: string; active?: boolean; onClick: () => void }) {
+/* =========================
+   SUB COMPONENTS
+   ========================= */
+
+function Tool({
+  icon,
+  active,
+  onClick,
+}: {
+  icon: string;
+  active?: boolean;
+  onClick: () => void;
+}) {
   return (
     <Image
       src={icon}

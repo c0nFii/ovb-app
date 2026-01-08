@@ -6,7 +6,7 @@ import DrawingSVG from "@/components/presentation/DrawingSVG";
 import LaserPointer from "@/components/presentation/LaserPointer";
 import ExportArea from "@/components/export/ExportArea";
 import DrawingOverlay from "@/components/presentation/DrawingOverlay";
-
+import { Path } from "@/components/presentation/DrawingSVG";
 import FlowController from "./FlowController";
 import AnalyseErklärung from "./AnalyseErklaerung";
 import BeratungErklärung from "./BeratungErklaerung";
@@ -17,7 +17,7 @@ import { useState } from "react";
 export default function ABSPage() {
   const [mode, setMode] =
     useState<"normal" | "draw" | "erase" | "laser">("normal");
-
+const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
   const [showAnalyse, setShowAnalyse] = useState(false);
   const [showBeratung, setShowBeratung] = useState(false);
   const [showService, setShowService] = useState(false); // 👈 NEU
@@ -44,8 +44,11 @@ export default function ABSPage() {
   <DrawingSVG
     active={mode === "draw" || mode === "erase"}
     erase={mode === "erase"}
+    paths={drawingPaths}
+    setPaths={setDrawingPaths}
   />
 </DrawingOverlay>
+
 
 
           {/* STEP 1 – FlowController */}

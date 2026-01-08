@@ -10,7 +10,7 @@ import ImageSequence from "@/components/presentation/ImageSequence";
 import DrawingSVG from "@/components/presentation/DrawingSVG";
 import LaserPointer from "@/components/presentation/LaserPointer";
 import DrawingOverlay from "@/components/presentation/DrawingOverlay";
-
+import { Path } from "@/components/presentation/DrawingSVG";
 import ExportArea from "@/components/export/ExportArea";
 import OVBHints from "@/components/presentation/OVBHints";
 
@@ -19,7 +19,7 @@ export default function KapitalmarktPage() {
   const [imageIndex, setImageIndex] = useState(0);
   const [mode, setMode] =
     useState<"normal" | "draw" | "erase" | "laser">("normal");
-
+const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
   const [showNextTrigger, setShowNextTrigger] = useState(true);
 
   // 🔥 OVB Hint Ablauf
@@ -121,8 +121,11 @@ export default function KapitalmarktPage() {
   <DrawingSVG
     active={mode === "draw" || mode === "erase"}
     erase={mode === "erase"}
+    paths={drawingPaths}
+    setPaths={setDrawingPaths}
   />
 </DrawingOverlay>
+
 
 
 

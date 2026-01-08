@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import AppScreenWrapper from "@/components/AppScreenWrapper";
 import TopBar from "@/components/layout/TopBar";
 import DrawingSVG from "@/components/presentation/DrawingSVG";
@@ -8,10 +8,15 @@ import ExportArea from "@/components/export/ExportArea";
 import KontaktbogenForm from "./KontaktbogenForm";
 import NameDialog from "./NameDialog";
 import LaserPointer from "@/components/presentation/LaserPointer";
+import DrawingOverlay from "@/components/presentation/DrawingOverlay";
 
 import "./kontaktbogen.css";
 
 export const OVB_BLUE = "#013F72";
+
+/* =========================
+   TYPES
+   ========================= */
 
 export type Person = {
   name: string;
@@ -22,12 +27,22 @@ export type Person = {
   bemerkung: string;
 };
 
+export type Path = {
+  d: string;
+  color: string;
+  width: number;
+};
+
+/* =========================
+   PAGE
+   ========================= */
+
 export default function KontaktbogenPage() {
   const [mode, setMode] =
     useState<"normal" | "draw" | "erase" | "laser">("normal");
 
-  const [isExporting, setIsExporting] = useState(false);
   const [page, setPage] = useState<1 | 2>(1);
+  const [isExporting, setIsExporting] = useState(false);
 
   const [personen, setPersonen] = useState<Person[]>(
     Array.from({ length: 12 }, () => ({
@@ -43,11 +58,34 @@ export default function KontaktbogenPage() {
   const [showNameDialog, setShowNameDialog] = useState(false);
   const [geberName, setGeberName] = useState("");
 
-  const handleSave = () => setShowNameDialog(true);
+  /* =========================
+     DRAWING STATE (PERSISTENT)
+     ========================= */
+
+  const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
 
   /* =========================
-     EXPORT (SERVER → URL)
+     FORM
      ========================= */
+
+  const startIndex = page === 1 ? 0 : 6;
+
+  const updateField =
+    (index: number, field: keyof Person) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const value = e.target.value;
+      setPersonen((prev) => {
+        const next = [...prev];
+        next[index] = { ...next[index], [field]: value };
+        return next;
+      });
+    };
+
+  /* =========================
+     EXPORT
+     ========================= */
+
+  const handleSave = () => setShowNameDialog(true);
 
   const confirmExport = async () => {
     if (!geberName.trim()) return;
@@ -71,23 +109,6 @@ export default function KontaktbogenPage() {
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
 
-    const isMobile =
-      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-    // 📱 Mobile → Share (nur HTTPS!)
-    if (isMobile && typeof navigator.share === "function") {
-      try {
-        await navigator.share({
-          url,
-          title: `Empfehlungen ${geberName}`,
-        });
-        return;
-      } catch {
-        // Abbruch → Download
-      }
-    }
-
-    // 🖥 Desktop / Fallback → Download
     const a = document.createElement("a");
     a.href = url;
     a.download = `Empfehlungen-${geberName}.pdf`;
@@ -98,32 +119,58 @@ export default function KontaktbogenPage() {
   };
 
   /* =========================
-     FORM UPDATE
+     SWIPE NAVIGATION
      ========================= */
 
-  const updateField =
-    (index: number, field: keyof Person) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      const value = e.target.value;
-      setPersonen((prev) => {
-        const next = [...prev];
-        next[index] = { ...next[index], [field]: value };
-        return next;
-      });
-    };
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
 
-  const startIndex = page === 1 ? 0 : 6;
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStartX.current = t.clientX;
+    touchStartY.current = t.clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStartX.current;
+    const dy = t.clientY - touchStartY.current;
+
+    if (Math.abs(dy) > Math.abs(dx)) return;
+    if (Math.abs(dx) < 60) return;
+
+    if (dx < 0 && page === 1) setPage(2);
+    if (dx > 0 && page === 2) setPage(1);
+
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
+
+  /* =========================
+     RENDER
+     ========================= */
 
   return (
     <>
       <TopBar mode={mode} setMode={setMode} onSave={handleSave} />
-<LaserPointer mode={mode} />
+      <LaserPointer mode={mode} />
+
       <AppScreenWrapper>
-        <div className="kontaktbogen-stage">
-          <DrawingSVG
-  active={mode === "draw" || mode === "erase"}
-  erase={mode === "erase"}
-/>
+        <div
+          className="kontaktbogen-stage"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
+          <DrawingOverlay active={mode === "draw" || mode === "erase"}>
+  <DrawingSVG
+    active={mode === "draw" || mode === "erase"}
+    erase={mode === "erase"}
+    paths={drawingPaths}
+    setPaths={setDrawingPaths}
+  />
+</DrawingOverlay>
 
 
           <KontaktbogenForm

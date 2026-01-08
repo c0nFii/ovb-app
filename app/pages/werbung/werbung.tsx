@@ -112,7 +112,7 @@ export default function WerbungFlow({ mode }: { mode: any }) {
       <style jsx>{`
         @keyframes wipeIn {
           from {
-            clip-path: inset(0 0 100% 0);
+            clip-path: inset(0 100% 0 0);
           }
           to {
             clip-path: inset(0 0 0 0);

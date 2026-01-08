@@ -3,10 +3,20 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 
-import DrawingSVG from "@/components/presentation/DrawingSVG";
 import LaserPointer from "@/components/presentation/LaserPointer";
 import PulseCircle from "@/components/presentation/PulseCircle";
 
+/* =========================
+   KONFIGURATION
+   ========================= */
+
+const KREUZ_IMAGE = "werbungskreuz.png";
+const KREUZ_ANIMATION_DURATION = 4000;
+const RING_DELAY = 1200;
+
+/* =========================
+   COMPONENT
+   ========================= */
 
 export default function GrundSkel({
   mode,
@@ -17,55 +27,46 @@ export default function GrundSkel({
   start: boolean;
   onFinish: () => void;
 }) {
-  const [step, setStep] = useState(-1);
+  const [showKreuz, setShowKreuz] = useState(false);
   const [showRing, setShowRing] = useState(false);
 
-  const sequence = [
-    "werbung1.png",
-    "werbung2.png",
-    "werbung3.png",
-    "werbungskreuz.png",
-  ];
-
-  const groupImages = ["201.png", "202.png", "203.png", "204.png", "205.png"];
+  /* =========================
+     START → KREUZ EINBLENDEN
+     ========================= */
 
   useEffect(() => {
-    if (start && step === -1) {
-      setStep(0);
-    }
-  }, [start, step]);
+    if (!start) return;
 
-  useEffect(() => {
-    if (step < 0) return;
+    setShowKreuz(true);
 
-    if (step < sequence.length) {
-      const t = setTimeout(() => setStep(step + 1), 1300);
-      return () => clearTimeout(t);
-    }
+    const ringTimeout = setTimeout(
+      () => setShowRing(true),
+      KREUZ_ANIMATION_DURATION + RING_DELAY
+    );
 
-    if (step === sequence.length) {
-      const t = setTimeout(() => setStep(step + 1), 500);
-      return () => clearTimeout(t);
-    }
+    return () => clearTimeout(ringTimeout);
+  }, [start]);
 
-    if (step === sequence.length + 1) {
-      const t = setTimeout(() => setShowRing(true), 3200);
-      return () => clearTimeout(t);
-    }
-  }, [step]);
+  /* =========================
+     RING CLICK
+     ========================= */
 
   const handleRingClick = () => {
     setShowRing(false);
     onFinish();
   };
 
+  /* =========================
+     RENDER
+     ========================= */
+
   return (
     <>
-      {/* ===== SVG & LASER — IMMER OBEN, NIE TRANSFORMIERT ===== */}
+      {/* ===== LASER ===== */}
       <LaserPointer mode={mode} />
 
-      {/* ===== BILDERBEREICH — DARF TRANSFORMIERT WERDEN ===== */}
-      <div style={{ pointerEvents: "none" }}>
+      {/* ===== KREUZ ===== */}
+      {showKreuz && (
         <div
           style={{
             position: "absolute",
@@ -74,44 +75,21 @@ export default function GrundSkel({
             transform: "translate(-50%, -50%)",
             width: "clamp(300px, 60vw, 1400px)",
             height: "clamp(200px, 40vw, 1400px)",
+            pointerEvents: "none",
           }}
         >
-          {sequence.map((img, i) =>
-            step >= i ? (
-              <div key={img} style={{ position: "absolute", inset: 0 }}>
-                <Image
-                  src={`/pictures/${img}`}
-                  alt=""
-                  fill
-                  style={{
-                    objectFit: "contain",
-                    clipPath:
-                      step === i ? "inset(0 0 100% 0)" : "inset(0 0 0 0)",
-                    animation:
-                      step === i ? "wipeIn 3s ease forwards" : "none",
-                  }}
-                />
-              </div>
-            ) : null
-          )}
-
-          {step > sequence.length &&
-            groupImages.map((img) => (
-              <div key={img} style={{ position: "absolute", inset: 0 }}>
-                <Image
-                  src={`/pictures/${img}`}
-                  alt=""
-                  fill
-                  style={{
-                    objectFit: "contain",
-                    clipPath: "inset(100% 0 0 0)",
-                    animation: "wipeIn 3s ease forwards",
-                  }}
-                />
-              </div>
-            ))}
+          <Image
+            src={`/pictures/${KREUZ_IMAGE}`}
+            alt=""
+            fill
+            style={{
+              objectFit: "contain",
+              clipPath: "inset(0 0 100% 0)",
+              animation: `wipeIn ${KREUZ_ANIMATION_DURATION}ms ease forwards`,
+            }}
+          />
         </div>
-      </div>
+      )}
 
       {/* ===== RING ===== */}
       {showRing && (
@@ -128,12 +106,13 @@ export default function GrundSkel({
         />
       )}
 
+      {/* ===== ANIMATION ===== */}
       <style jsx>{`
         @keyframes wipeIn {
-          0% {
+          from {
             clip-path: inset(0 0 100% 0);
           }
-          100% {
+          to {
             clip-path: inset(0 0 0 0);
           }
         }

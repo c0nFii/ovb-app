@@ -6,6 +6,7 @@ import DrawingSVG from "@/components/presentation/DrawingSVG";
 import LaserPointer from "@/components/presentation/LaserPointer";
 import ExportArea from "@/components/export/ExportArea";
 import FlowController from "./FlowController"; // 👈 WICHTIG
+import { Path } from "@/components/presentation/DrawingSVG";
 
 import { useState } from "react";
 import DrawingOverlay from "@/components/presentation/DrawingOverlay";
@@ -13,7 +14,7 @@ import DrawingOverlay from "@/components/presentation/DrawingOverlay";
 export default function FinanziellerLebensplanPage() {
   const [mode, setMode] =
     useState<"normal" | "draw" | "erase" | "laser">("normal");
-
+  const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
   const TOPBAR_HEIGHT = 76;
 
   return (
@@ -36,8 +37,11 @@ export default function FinanziellerLebensplanPage() {
   <DrawingSVG
     active={mode === "draw" || mode === "erase"}
     erase={mode === "erase"}
+    paths={drawingPaths}
+    setPaths={setDrawingPaths}
   />
 </DrawingOverlay>
+
 
 
 
