@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+
 import { PenProvider } from "@/components/layout/PenContext";
+import { NotesProvider } from "@/components/layout/NotesContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -45,7 +47,9 @@ export default function RootLayout({
         }}
       >
         <PenProvider>
-          {children}
+          <NotesProvider>
+            {children}
+          </NotesProvider>
         </PenProvider>
       </body>
     </html>
