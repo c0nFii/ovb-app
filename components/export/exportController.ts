@@ -52,10 +52,27 @@ export async function exportKontaktbogenToPDF(data: ExportData): Promise<void> {
 
   const logo = await loadOVBLogo();
 
-  /* =========================
-     SEITE 1 – NOTIZEN
-     ========================= */
+const hasNotes = Boolean(notes && notes.trim().length > 0);
+const hasPersons = personen && personen.length > 0;
 
+// ❗ Nichts zu exportieren
+if (!hasNotes && !hasPersons) {
+  if (onCleanupDialog) {
+    onCleanupDialog(false); // oder spezieller State
+  }
+
+  alert("Es gibt keine Inhalte zum Exportieren.");
+  return;
+}
+
+
+let pageCreated = false;
+
+/* =========================
+   SEITE – NOTIZEN (optional)
+   ========================= */
+
+if (hasNotes) {
   doc.addImage(logo, "PNG", 20, 10, 25, 0);
 
   doc.setFont("helvetica", "bold");
@@ -65,20 +82,24 @@ export async function exportKontaktbogenToPDF(data: ExportData): Promise<void> {
 
   let yPos = 70;
 
-  if (notes && notes.trim().length > 0) {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(12);
-    doc.setTextColor(OVB_BLUE);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(12);
+  doc.setTextColor(OVB_BLUE);
 
-    const wrapped = doc.splitTextToSize(notes, 170);
-    doc.text(wrapped, 20, yPos);
+  const wrapped = doc.splitTextToSize(notes!, 170);
+  doc.text(wrapped, 20, yPos);
+
+  pageCreated = true;
+}
+
+/* =========================
+   SEITE – EMPFEHLUNGEN (optional)
+   ========================= */
+
+if (hasPersons) {
+  if (pageCreated) {
+    doc.addPage();
   }
-
-  /* =========================
-     SEITE 2 – EMPFEHLUNGEN
-     ========================= */
-
-  doc.addPage();
 
   doc.addImage(logo, "PNG", 20, 10, 25, 0);
 
@@ -87,19 +108,17 @@ export async function exportKontaktbogenToPDF(data: ExportData): Promise<void> {
   doc.setTextColor(OVB_BLUE);
   doc.text(["Empfehlungen", geberName], 105, 40, { align: "center" });
 
-  yPos = 70;
+  let yPos = 70;
   const lineHeight = 7;
   const sectionGap = 10;
 
   personen.forEach((person, index) => {
     const isLast = index === personen.length - 1;
-
-    // Höhe des Blocks berechnen
     const blockHeight = 6 * lineHeight + sectionGap;
 
     if (yPos + blockHeight > 260) {
       doc.addPage();
-      yPos = 40; // kein Logo mehr ab Seite 3
+      yPos = 40;
     }
 
     const addField = (label: string, value?: string) => {
@@ -111,7 +130,6 @@ export async function exportKontaktbogenToPDF(data: ExportData): Promise<void> {
       doc.text(`${label}:`, 20, yPos);
 
       doc.setFont("helvetica", "normal");
-      doc.setTextColor(OVB_BLUE);
       doc.text(value, 55, yPos);
 
       yPos += lineHeight;
@@ -124,7 +142,6 @@ export async function exportKontaktbogenToPDF(data: ExportData): Promise<void> {
     addField("Telefon", person.telefon);
     addField("Bemerkung", person.bemerkung);
 
-    // 🔥 Nur Linie zeichnen, wenn es NICHT der letzte Kontakt ist
     if (!isLast) {
       yPos += 2;
       doc.setDrawColor(1, 63, 114);
@@ -133,6 +150,8 @@ export async function exportKontaktbogenToPDF(data: ExportData): Promise<void> {
       yPos += sectionGap;
     }
   });
+}
+
 
   /* =========================
      DOWNLOAD
