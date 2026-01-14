@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { jsPDF } from "jspdf";
 import { ErgebnisTyp } from "./ChancenblattFlow";
 import NameDialog from "../kontaktbogen/NameDialog";
+import { QUESTIONS } from "./ChancenblattQuestions";
+
 
 const OVB_BLUE = "#013F72";
 
@@ -60,50 +63,113 @@ export default function ChancenblattAuswertung({
      ========================= */
 
   const confirmExport = async () => {
-    if (!kundenName.trim()) return;
+  if (!kundenName.trim()) return;
 
-    setShowNameDialog(false);
+  setShowNameDialog(false);
 
-    const res = await fetch("/api/pdf", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: "chancenblatt",
-        ergebnisTyp: type,
-        kundenName,
-        content,
-        answers,
-      }),
-    });
+  // Logo laden
+  const response = await fetch("/ovb.png");
+  const blob = await response.blob();
+  const logo = await new Promise<string>((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.readAsDataURL(blob);
+  });
 
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
+  // PDF erstellen
+  const doc = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: "a4",
+  });
 
-    const isMobile =
-      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  doc.addImage(logo, "PNG", 20, 10, 25, 0);
 
-    // 📱 Mobile → Share (nur HTTPS!)
-    if (isMobile && typeof navigator.share === "function") {
-      try {
-        await navigator.share({
-          url,
-          title: `Chancenblatt ${kundenName}`,
-        });
-        return;
-      } catch {
-        // Abbruch → Download
-      }
-    }
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.setTextColor(OVB_BLUE);
+  doc.text(["Chancenblatt", kundenName], 105, 40, { align: "center" });
 
-    // 🖥 Desktop / Fallback → Download
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Chancenblatt-${kundenName}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+  let yPos = 70;
+
+  /* =========================
+     ERGEBNIS
+     ========================= */
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.setTextColor(OVB_BLUE);
+  const wrappedTitle = doc.splitTextToSize(content.title, 170);
+  doc.text(wrappedTitle, 20, yPos);
+  yPos += wrappedTitle.length * 6 + 2;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(12);
+  const wrappedText = doc.splitTextToSize(content.text, 170);
+  doc.text(wrappedText, 20, yPos);
+  yPos += wrappedText.length * 6 + 2;
+
+  const wrappedHint = doc.splitTextToSize(content.hint, 170);
+  doc.text(wrappedHint, 20, yPos);
+  yPos += wrappedHint.length * 6 + 8;
+
+  /* =========================
+   ANTWORTEN
+   ========================= */
+
+doc.setFont("helvetica", "bold");
+doc.setFontSize(14);
+doc.setTextColor(OVB_BLUE);
+doc.text("Antworten", 20, yPos);
+yPos += 10;
+
+QUESTIONS.forEach((question, index) => {
+  const answerValue = answers[question.id];
+  if (!answerValue) return;
+
+  const selectedOption = question.options.find(
+    (opt) => opt.value === answerValue
+  );
+  if (!selectedOption) return;
+
+  // Seitenumbruch
+  if (yPos > 260) {
+    doc.addPage();
+    yPos = 30;
+  }
+
+  // Frage (fett)
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.setTextColor(OVB_BLUE);
+  const qLines = doc.splitTextToSize(question.text, 170);
+  doc.text(qLines, 20, yPos);
+  yPos += qLines.length * 6 + 3;
+
+  // Antwort
+  doc.setFont("helvetica", "normal");
+  const aLines = doc.splitTextToSize(selectedOption.label, 170);
+  doc.text(aLines, 20, yPos);
+  yPos += aLines.length * 6 + 3;
+
+  // Trennlinie (nicht nach letzter Frage)
+  if (index < QUESTIONS.length - 1) {
+    doc.setDrawColor(1, 63, 114);
+    doc.setLineWidth(0.5);
+    doc.line(20, yPos, 190, yPos);
+    yPos += 8;
+  }
+});
+
+
+
+  /* =========================
+     DOWNLOAD
+     ========================= */
+
+  doc.save(`Chancenblatt-${kundenName}.pdf`);
+};
+
 
   /* =========================
      RENDER

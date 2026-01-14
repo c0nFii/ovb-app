@@ -9,6 +9,9 @@ import KontaktbogenForm from "./KontaktbogenForm";
 import NameDialog from "./NameDialog";
 import LaserPointer from "@/components/presentation/LaserPointer";
 import DrawingOverlay from "@/components/presentation/DrawingOverlay";
+import { exportKontaktbogenToPDF } from "@/components/export/exportController";
+import { useNotes } from "@/components/layout/NotesContext";
+import {CleanupDialog} from "@/components/export/cleanUpDialog"
 
 import "./kontaktbogen.css";
 
@@ -33,6 +36,7 @@ export type Path = {
   width: number;
 };
 
+
 /* =========================
    PAGE
    ========================= */
@@ -56,6 +60,7 @@ export default function KontaktbogenPage() {
   );
 
   const [showNameDialog, setShowNameDialog] = useState(false);
+  const [showCleanupDialog, setShowCleanupDialog] = useState(false);
   const [geberName, setGeberName] = useState("");
 
   /* =========================
@@ -63,6 +68,12 @@ export default function KontaktbogenPage() {
      ========================= */
 
   const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
+
+  /* =========================
+     NOTES CONTEXT
+     ========================= */
+
+  const { notes, updateText } = useNotes();
 
   /* =========================
      FORM
@@ -93,29 +104,40 @@ export default function KontaktbogenPage() {
     setMode("normal");
     setIsExporting(true);
 
-    const res = await fetch("/api/pdf", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: "empfehlungen",
-        name: geberName,
-        empfehlungen: personen.filter((p) => p.name.trim() !== ""),
-      }),
-    });
+    try {
+      await exportKontaktbogenToPDF({
+        geberName,
+        personen: personen.filter((p) => p.name.trim() !== ""),
+        notes: notes.text,
+        onCleanupDialog: setShowCleanupDialog,
+      });
+    } catch (error) {
+      console.error("Export failed:", error);
+    } finally {
+      setIsExporting(false);
+      setShowNameDialog(false);
+    }
+  };
 
-    setIsExporting(false);
-    setShowNameDialog(false);
+  /* =========================
+     CLEANUP
+     ========================= */
 
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Empfehlungen-${geberName}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const handleCleanup = () => {
+    setPersonen(
+      Array.from({ length: 12 }, () => ({
+        name: "",
+        ort: "",
+        alter: "",
+        beruf: "",
+        telefon: "",
+        bemerkung: "",
+      }))
+    );
+    updateText("");
+    setDrawingPaths([]);
+    setGeberName("");
+    setShowCleanupDialog(false);
   };
 
   /* =========================
@@ -164,14 +186,13 @@ export default function KontaktbogenPage() {
           onTouchEnd={handleTouchEnd}
         >
           <DrawingOverlay active={mode === "draw" || mode === "erase"}>
-  <DrawingSVG
-    active={mode === "draw" || mode === "erase"}
-    erase={mode === "erase"}
-    paths={drawingPaths}
-    setPaths={setDrawingPaths}
-  />
-</DrawingOverlay>
-
+            <DrawingSVG
+              active={mode === "draw" || mode === "erase"}
+              erase={mode === "erase"}
+              paths={drawingPaths}
+              setPaths={setDrawingPaths}
+            />
+          </DrawingOverlay>
 
           <KontaktbogenForm
             personen={personen.slice(startIndex, startIndex + 6)}
@@ -201,6 +222,13 @@ export default function KontaktbogenPage() {
           onChange={setGeberName}
           onCancel={() => setShowNameDialog(false)}
           onConfirm={confirmExport}
+        />
+      )}
+
+      {showCleanupDialog && (
+        <CleanupDialog
+          onConfirm={handleCleanup}
+          onCancel={() => setShowCleanupDialog(false)}
         />
       )}
     </>
