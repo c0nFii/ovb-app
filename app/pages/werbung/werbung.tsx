@@ -3,32 +3,50 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 
-import DrawingSVG from "@/components/presentation/DrawingSVG";
 import LaserPointer from "@/components/presentation/LaserPointer";
 import PulseCircle from "@/components/presentation/PulseCircle";
 
-export default function WerbungFlow({ mode }: { mode: any }) {
+export default function WerbungFlow({
+  mode,
+  onComplete,
+}: {
+  mode: any;
+  onComplete: () => void;
+}) {
   const [step, setStep] = useState(0);
   const [showRing, setShowRing] = useState(false);
 
   const group200 = ["200_1.png", "200_2.png", "200_3.png", "200_4.png", "200_5.png"];
   const groupX = ["x2.png", "x3.png", "x4.png", "x5.png"];
 
+  /* =========================
+     STEP LOGIK + RING
+     ========================= */
+
   useEffect(() => {
     if (step >= 5) {
       setShowRing(false);
+      onComplete(); // ✅ FLOW IST FERTIG
       return;
     }
 
     setShowRing(false);
-    const t = setTimeout(() => setShowRing(true), step >= 3 ? 2500 : 1500);
+    const t = setTimeout(
+      () => setShowRing(true),
+      step >= 3 ? 2500 : 1500
+    );
+
     return () => clearTimeout(t);
-  }, [step]);
+  }, [step, onComplete]);
 
   const handleRingClick = () => {
     setShowRing(false);
     setStep((s) => s + 1);
   };
+
+  /* =========================
+     WIPE STYLE
+     ========================= */
 
   const wipeStyle = (isNew: boolean): React.CSSProperties => ({
     objectFit: "contain",
@@ -36,13 +54,16 @@ export default function WerbungFlow({ mode }: { mode: any }) {
     animation: isNew ? "wipeIn 3s ease forwards" : "none",
   });
 
+  /* =========================
+     RENDER
+     ========================= */
+
   return (
     <>
-      {/* ===== LASER + ZEICHNEN (MUSS ÜBER ALLEM SEIN) ===== */}
+      {/* ===== LASER ===== */}
       <LaserPointer mode={mode} />
 
-
-      {/* ===== BILDERBEREICH (DARF pointerEvents: none HABEN) ===== */}
+      {/* ===== BILDERBEREICH ===== */}
       <div style={{ pointerEvents: "none" }}>
         <div
           style={{
@@ -109,6 +130,7 @@ export default function WerbungFlow({ mode }: { mode: any }) {
         />
       )}
 
+      {/* ===== ANIMATION ===== */}
       <style jsx>{`
         @keyframes wipeIn {
           from {

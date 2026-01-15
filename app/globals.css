@@ -170,3 +170,31 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ======================================================
+   WEITER BUTTON – GLOBAL UI
+   ====================================================== */
+
+.werbung-weiter-button {
+  position: fixed;              /* bewusst FIXED */
+  bottom: 24px;
+  right: 24px;
+
+  padding: 14px 22px;
+  font-size: 16px;
+  font-weight: 600;
+
+  background: #003A66;
+  color: white;
+  border: none;
+  border-radius: 10px;
+
+  cursor: pointer;
+  z-index: 10000;               /* über Laser, Bilder, SVG */
+
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.werbung-weiter-button:hover {
+  background: #00437a;
+}

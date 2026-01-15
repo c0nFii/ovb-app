@@ -5,7 +5,11 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import PulseCircle from "@/components/presentation/PulseCircle";
 
-export default function EmpfehlungFlow() {
+type EmpfehlungFlowProps = {
+  onComplete?: () => void; // 👈 NEU
+};
+
+export default function EmpfehlungFlow({ onComplete }: EmpfehlungFlowProps) {
   const router = useRouter();
 
   const [step, setStep] = useState(0);
@@ -46,13 +50,16 @@ export default function EmpfehlungFlow() {
     }
   };
 
-  // wichtig.png → nach 2s pulsieren
+  // wichtig.png → nach 2s pulsieren + onComplete
   useEffect(() => {
     if (step === sequence.length) {
-      const t = setTimeout(() => setShowWichtigButton(true), 1500);
+      const t = setTimeout(() => {
+        setShowWichtigButton(true);
+        onComplete?.(); // 👈 NEU: Flow fertig!
+      }, 1500);
       return () => clearTimeout(t);
     }
-  }, [step]);
+  }, [step, onComplete]);
 
   const wipeStyle = (isNew: boolean): React.CSSProperties => ({
     objectFit: "contain",
@@ -105,23 +112,18 @@ export default function EmpfehlungFlow() {
         />
       )}
 
-      {/* WICHTIG.png als Button */}
+      {/* WICHTIG.png als Info (kein Click mehr) */}
       {step === sequence.length && (
         <div
-          onClick={() => router.push("/pages/kontaktbogen")}
           style={{
             position: "absolute",
-            top: "60%", // 🔥 10% unter den anderen Bildern
+            top: "60%",
             left: "50%",
             transform: "translate(-50%, -50%)",
             width: "clamp(300px, 60vw, 1400px)",
             height: "clamp(200px, 40vw, 1400px)",
-            cursor: "pointer",
-            animation: showWichtigButton
-              ? "pulse 1.6s ease-in-out infinite"
-              : "none",
             zIndex: 99999,
-            pointerEvents: "auto",
+            pointerEvents: "none", // 👈 kein Click mehr
           }}
         >
           <Image

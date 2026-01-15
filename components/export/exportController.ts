@@ -1,17 +1,9 @@
 import { jsPDF } from "jspdf";
+import { exportKontaktbogenTextPDF, Person } from "./exportText";
 
 /* =========================
    TYPES
    ========================= */
-
-export type Person = {
-  name: string;
-  ort: string;
-  alter: string;
-  beruf: string;
-  telefon: string;
-  bemerkung: string;
-};
 
 export type ExportData = {
   geberName: string;
@@ -21,124 +13,123 @@ export type ExportData = {
 };
 
 /* =========================
-   LOGO LADEN
+   SCREENSHOT KEYS
    ========================= */
 
-async function loadOVBLogo(): Promise<string> {
-  const response = await fetch("/ovb.png");
-  const blob = await response.blob();
-
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.readAsDataURL(blob);
-  });
-}
+const SCREENSHOT_KEYS = {
+  werbung: "werbungScreenshot",
+  empfehlung: "empfehlungScreenshot",
+  // 👇 Einfach weitere Seiten hinzufügen:
+  // produkte: "produkteScreenshot",
+  // beratung: "beratungScreenshot",
+} as const;
 
 /* =========================
-   PDF EXPORT
+   CONTROLLER
    ========================= */
 
 export async function exportKontaktbogenToPDF(
   data: ExportData
 ): Promise<void> {
-  const { geberName, personen, notes, onCleanupDialog } = data;
+  const {
+    geberName,
+    personen,
+    notes,
+    onCleanupDialog,
+  } = data;
 
-  const OVB_BLUE = "#013F72";
+  /* =========================
+     📸 SCREENSHOTS AUS SESSION STORAGE
+     ========================= */
+
+  const screenshots = Object.entries(SCREENSHOT_KEYS).map(([key, storageKey]) => ({
+    name: key,
+    image: sessionStorage.getItem(storageKey),
+  })).filter(s => s.image); // Nur vorhandene
+
+  const hasScreenshots = screenshots.length > 0;
+
+  /* =========================
+     PDF INITIALISIEREN
+     ========================= */
 
   const doc = new jsPDF({
-    orientation: "portrait",
+    orientation: hasScreenshots ? "landscape" : "portrait",
     unit: "mm",
     format: "a4",
   });
 
-  const logo = await loadOVBLogo();
-
-  let pageCreated = false;
-
   /* =========================
-     SEITE – NOTIZEN (optional)
+     1️⃣ ALLE SCREENSHOTS EINFÜGEN (FIT TO A4)
      ========================= */
 
-  if (notes && notes.trim().length > 0) {
-    doc.addImage(logo, "PNG", 20, 10, 25, 0);
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
-    doc.setTextColor(OVB_BLUE);
-    doc.text(["Notizen", geberName], 105, 40, { align: "center" });
-
-    let yPos = 70;
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(12);
-    doc.setTextColor(OVB_BLUE);
-
-    const wrapped = doc.splitTextToSize(notes, 170);
-    doc.text(wrapped, 20, yPos);
-
-    pageCreated = true;
-  }
-
-  /* =========================
-     SEITE – EMPFEHLUNGEN (optional)
-     ========================= */
-
-  if (personen.length > 0) {
-    if (pageCreated) {
-      doc.addPage();
+  for (let i = 0; i < screenshots.length; i++) {
+    const { image } = screenshots[i];
+    
+    if (i > 0) {
+      doc.addPage("a4", "landscape");
     }
 
-    doc.addImage(logo, "PNG", 20, 10, 25, 0);
+    // 👇 Bild-Dimensionen berechnen
+    const img = new Image();
+    img.src = image!;
+    
+    await new Promise<void>((resolve) => {
+      img.onload = () => {
+        const imgWidth = img.width;
+        const imgHeight = img.height;
+        const aspectRatio = imgHeight / imgWidth;
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
-    doc.setTextColor(OVB_BLUE);
-    doc.text(["Empfehlungen", geberName], 105, 40, { align: "center" });
+        // 👇 A4 Querformat
+        const maxWidth = 297;
+        const maxHeight = 210;
 
-    let yPos = 70;
-    const lineHeight = 7;
-    const sectionGap = 10;
+        // 👇 Erst Breite auf max setzen
+        let pdfWidth = maxWidth;
+        let pdfHeight = pdfWidth * aspectRatio;
 
-    personen.forEach((person, index) => {
-      const isLast = index === personen.length - 1;
-      const blockHeight = 6 * lineHeight + sectionGap;
+        // 👇 Wenn zu hoch → Höhe auf max + Breite proportional reduzieren
+        if (pdfHeight > maxHeight) {
+          pdfHeight = maxHeight;
+          pdfWidth = pdfHeight / aspectRatio;
+        }
 
-      if (yPos + blockHeight > 260) {
-        doc.addPage();
-        yPos = 40;
-      }
+        // 👇 Zentrieren
+        const x = (maxWidth - pdfWidth) / 2;
+        const y = (maxHeight - pdfHeight) / 2;
 
-      const addField = (label: string, value?: string) => {
-        if (!value) return;
+        doc.addImage(
+          image!,
+          "JPEG",
+          x,
+          y,
+          pdfWidth,
+          pdfHeight
+        );
 
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(11);
-        doc.setTextColor(OVB_BLUE);
-        doc.text(`${label}:`, 20, yPos);
-
-        doc.setFont("helvetica", "normal");
-        doc.text(value, 55, yPos);
-
-        yPos += lineHeight;
+        resolve();
       };
-
-      addField("Name", person.name);
-      addField("Ort", person.ort);
-      addField("Alter", person.alter);
-      addField("Beruf", person.beruf);
-      addField("Telefon", person.telefon);
-      addField("Bemerkung", person.bemerkung);
-
-      if (!isLast) {
-        yPos += 2;
-        doc.setDrawColor(1, 63, 114);
-        doc.setLineWidth(0.5);
-        doc.line(20, yPos, 190, yPos);
-        yPos += sectionGap;
-      }
     });
   }
+
+  /* =========================
+     🔄 WECHSEL ZU PORTRAIT (nur bei Screenshots)
+     ========================= */
+
+  if (hasScreenshots) {
+    doc.addPage("a4", "portrait");
+  }
+
+  /* =========================
+     2️⃣ TEXT (NOTIZEN + EMPFEHLUNGEN)
+     ========================= */
+
+  await exportKontaktbogenTextPDF({
+    geberName,
+    personen,
+    notes,
+    doc,
+  });
 
   /* =========================
      DOWNLOAD
@@ -147,7 +138,7 @@ export async function exportKontaktbogenToPDF(
   doc.save(`Firmenvorstellung-${geberName}.pdf`);
 
   /* =========================
-     CLEANUP DIALOG
+     CLEANUP
      ========================= */
 
   if (onCleanupDialog) {
@@ -155,4 +146,9 @@ export async function exportKontaktbogenToPDF(
       onCleanupDialog(true);
     }, 100);
   }
+
+  // 🧹 Optional: Screenshots aus sessionStorage löschen
+  Object.values(SCREENSHOT_KEYS).forEach(key => {
+    sessionStorage.removeItem(key);
+  });
 }

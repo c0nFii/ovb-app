@@ -1,0 +1,17 @@
+/* =========================
+   EXPORT CONTAINER
+   ========================= */
+
+.werbung-export-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Optional, falls du mehrere Export-Seiten hast */
+.export-page {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
