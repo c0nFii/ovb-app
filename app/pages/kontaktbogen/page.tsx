@@ -7,11 +7,12 @@ import DrawingSVG from "@/components/presentation/DrawingSVG";
 import ExportArea from "@/components/export/ExportArea";
 import KontaktbogenForm from "./KontaktbogenForm";
 import NameDialog from "./NameDialog";
+import { NothingToExportDialog } from "@/components/export/NothingToExport";
 import LaserPointer from "@/components/presentation/LaserPointer";
 import DrawingOverlay from "@/components/presentation/DrawingOverlay";
 import { exportKontaktbogenToPDF } from "@/components/export/exportController";
 import { useNotes } from "@/components/layout/NotesContext";
-import {CleanupDialog} from "@/components/export/cleanUpDialog"
+import { CleanupDialog } from "@/components/export/cleanUpDialog";
 
 import "./kontaktbogen.css";
 
@@ -35,7 +36,6 @@ export type Path = {
   color: string;
   width: number;
 };
-
 
 /* =========================
    PAGE
@@ -61,17 +61,10 @@ export default function KontaktbogenPage() {
 
   const [showNameDialog, setShowNameDialog] = useState(false);
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
+  const [showNothingDialog, setShowNothingDialog] = useState(false);
   const [geberName, setGeberName] = useState("");
 
-  /* =========================
-     DRAWING STATE (PERSISTENT)
-     ========================= */
-
   const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
-
-  /* =========================
-     NOTES CONTEXT
-     ========================= */
 
   const { notes, updateText } = useNotes();
 
@@ -93,10 +86,20 @@ export default function KontaktbogenPage() {
     };
 
   /* =========================
-     EXPORT
+     EXPORT (GUARD!)
      ========================= */
 
-  const handleSave = () => setShowNameDialog(true);
+  const handleSave = () => {
+    const hasNotes = Boolean(notes.text && notes.text.trim().length > 0);
+    const hasPersons = personen.some((p) => p.name.trim() !== "");
+
+    if (!hasNotes && !hasPersons) {
+      setShowNothingDialog(true);
+      return;
+    }
+
+    setShowNameDialog(true);
+  };
 
   const confirmExport = async () => {
     if (!geberName.trim()) return;
@@ -222,6 +225,12 @@ export default function KontaktbogenPage() {
           onChange={setGeberName}
           onCancel={() => setShowNameDialog(false)}
           onConfirm={confirmExport}
+        />
+      )}
+
+      {showNothingDialog && (
+        <NothingToExportDialog
+          onClose={() => setShowNothingDialog(false)}
         />
       )}
 

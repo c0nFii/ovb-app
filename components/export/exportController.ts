@@ -39,7 +39,9 @@ async function loadOVBLogo(): Promise<string> {
    PDF EXPORT
    ========================= */
 
-export async function exportKontaktbogenToPDF(data: ExportData): Promise<void> {
+export async function exportKontaktbogenToPDF(
+  data: ExportData
+): Promise<void> {
   const { geberName, personen, notes, onCleanupDialog } = data;
 
   const OVB_BLUE = "#013F72";
@@ -52,106 +54,91 @@ export async function exportKontaktbogenToPDF(data: ExportData): Promise<void> {
 
   const logo = await loadOVBLogo();
 
-const hasNotes = Boolean(notes && notes.trim().length > 0);
-const hasPersons = personen && personen.length > 0;
+  let pageCreated = false;
 
-// ❗ Nichts zu exportieren
-if (!hasNotes && !hasPersons) {
-  if (onCleanupDialog) {
-    onCleanupDialog(false); // oder spezieller State
+  /* =========================
+     SEITE – NOTIZEN (optional)
+     ========================= */
+
+  if (notes && notes.trim().length > 0) {
+    doc.addImage(logo, "PNG", 20, 10, 25, 0);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.setTextColor(OVB_BLUE);
+    doc.text(["Notizen", geberName], 105, 40, { align: "center" });
+
+    let yPos = 70;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(12);
+    doc.setTextColor(OVB_BLUE);
+
+    const wrapped = doc.splitTextToSize(notes, 170);
+    doc.text(wrapped, 20, yPos);
+
+    pageCreated = true;
   }
 
-  alert("Es gibt keine Inhalte zum Exportieren.");
-  return;
-}
+  /* =========================
+     SEITE – EMPFEHLUNGEN (optional)
+     ========================= */
 
-
-let pageCreated = false;
-
-/* =========================
-   SEITE – NOTIZEN (optional)
-   ========================= */
-
-if (hasNotes) {
-  doc.addImage(logo, "PNG", 20, 10, 25, 0);
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.setTextColor(OVB_BLUE);
-  doc.text(["Notizen", geberName], 105, 40, { align: "center" });
-
-  let yPos = 70;
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(12);
-  doc.setTextColor(OVB_BLUE);
-
-  const wrapped = doc.splitTextToSize(notes!, 170);
-  doc.text(wrapped, 20, yPos);
-
-  pageCreated = true;
-}
-
-/* =========================
-   SEITE – EMPFEHLUNGEN (optional)
-   ========================= */
-
-if (hasPersons) {
-  if (pageCreated) {
-    doc.addPage();
-  }
-
-  doc.addImage(logo, "PNG", 20, 10, 25, 0);
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.setTextColor(OVB_BLUE);
-  doc.text(["Empfehlungen", geberName], 105, 40, { align: "center" });
-
-  let yPos = 70;
-  const lineHeight = 7;
-  const sectionGap = 10;
-
-  personen.forEach((person, index) => {
-    const isLast = index === personen.length - 1;
-    const blockHeight = 6 * lineHeight + sectionGap;
-
-    if (yPos + blockHeight > 260) {
+  if (personen.length > 0) {
+    if (pageCreated) {
       doc.addPage();
-      yPos = 40;
     }
 
-    const addField = (label: string, value?: string) => {
-      if (!value) return;
+    doc.addImage(logo, "PNG", 20, 10, 25, 0);
 
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.setTextColor(OVB_BLUE);
-      doc.text(`${label}:`, 20, yPos);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.setTextColor(OVB_BLUE);
+    doc.text(["Empfehlungen", geberName], 105, 40, { align: "center" });
 
-      doc.setFont("helvetica", "normal");
-      doc.text(value, 55, yPos);
+    let yPos = 70;
+    const lineHeight = 7;
+    const sectionGap = 10;
 
-      yPos += lineHeight;
-    };
+    personen.forEach((person, index) => {
+      const isLast = index === personen.length - 1;
+      const blockHeight = 6 * lineHeight + sectionGap;
 
-    addField("Name", person.name);
-    addField("Ort", person.ort);
-    addField("Alter", person.alter);
-    addField("Beruf", person.beruf);
-    addField("Telefon", person.telefon);
-    addField("Bemerkung", person.bemerkung);
+      if (yPos + blockHeight > 260) {
+        doc.addPage();
+        yPos = 40;
+      }
 
-    if (!isLast) {
-      yPos += 2;
-      doc.setDrawColor(1, 63, 114);
-      doc.setLineWidth(0.5);
-      doc.line(20, yPos, 190, yPos);
-      yPos += sectionGap;
-    }
-  });
-}
+      const addField = (label: string, value?: string) => {
+        if (!value) return;
 
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(OVB_BLUE);
+        doc.text(`${label}:`, 20, yPos);
+
+        doc.setFont("helvetica", "normal");
+        doc.text(value, 55, yPos);
+
+        yPos += lineHeight;
+      };
+
+      addField("Name", person.name);
+      addField("Ort", person.ort);
+      addField("Alter", person.alter);
+      addField("Beruf", person.beruf);
+      addField("Telefon", person.telefon);
+      addField("Bemerkung", person.bemerkung);
+
+      if (!isLast) {
+        yPos += 2;
+        doc.setDrawColor(1, 63, 114);
+        doc.setLineWidth(0.5);
+        doc.line(20, yPos, 190, yPos);
+        yPos += sectionGap;
+      }
+    });
+  }
 
   /* =========================
      DOWNLOAD
@@ -163,7 +150,6 @@ if (hasPersons) {
      CLEANUP DIALOG
      ========================= */
 
-  // Warte kurz, damit der Download startet, bevor der Dialog erscheint
   if (onCleanupDialog) {
     setTimeout(() => {
       onCleanupDialog(true);
