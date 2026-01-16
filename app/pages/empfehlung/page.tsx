@@ -43,13 +43,11 @@ export default function EmpfehlungPage() {
      ========================= */
 
   const handleWeiter = async () => {
-    // 👇 Button verstecken
+    
     setShowWeiterButton(false);
     
-    // 👇 Kurz warten, damit React rendern kann
     await new Promise(resolve => setTimeout(resolve, 50));
     
-    // 🔴 A4 Landscape Optimierung
     const image = await exportPageContainerAsImage({
       containerId: "empfehlung-export",
       backgroundColor: "#ffffff",
@@ -69,7 +67,6 @@ export default function EmpfehlungPage() {
 
       <AppScreenWrapper>
         <div className="werbung-export-container" id="empfehlung-export">
-          {/* 🔥 LASER MUSS GANZ OBEN SEIN */}
           <LaserPointer mode={mode} />
 
           {/* ===== DRAWING LAYER (SVG) ===== */}

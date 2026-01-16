@@ -4,17 +4,23 @@ import { useState } from "react";
 import ZieleFlow from "./ZieleFlow";
 import ProduktePfeilFlow from "./SituationsPfeil";
 
-export default function FlowController() {
+type FlowControllerProps = {
+  onComplete?: () => void;
+};
+
+export default function FlowController({ onComplete }: FlowControllerProps) {
   const [showProdukte, setShowProdukte] = useState(false);
 
   return (
     <>
-      {/* 🔹 BASIS-FLOW – BLEIBT IMMER */}
       <ZieleFlow onDone={() => setShowProdukte(true)} />
 
-      {/* 🔹 OVERLAY-FLOW – KOMMT DAZU */}
       {showProdukte && (
-        <ProduktePfeilFlow onDone={() => console.log("Next phase")} />
+        <ProduktePfeilFlow
+          onDone={() => {
+            onComplete?.(); // 🔴 HIER ist der Abschluss
+          }}
+        />
       )}
     </>
   );

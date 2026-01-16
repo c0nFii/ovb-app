@@ -11,6 +11,7 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
   const [showRing, setShowRing] = useState(false);
   const [step, setStep] = useState(0);
   const [problemStep, setProblemStep] = useState(0);
+  const [exportReady, setExportReady] = useState(false);
 
   // Alle Timer sauber tracken
   const timers = useRef<number[]>([]);
@@ -58,6 +59,23 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
 
     return clearAllTimers;
   }, [step]);
+
+  /* =========================
+     FLOW COMPLETED → exportReady + onDone
+     ========================= */
+
+  useEffect(() => {
+    if (step < 4) return;
+
+    // Warte kurz, damit die finale "Schnell" Animation starten kann,
+    // dann setze exportReady und melde onDone an die Parent-Komponente.
+    const t = setTimeout(() => {
+      setExportReady(true); // finalen, stabilen Zustand erzwingen (für Export)
+      onDone?.();
+    }, 1200); // Wartezeit wie vorher (kann angepasst werden)
+
+    return () => clearTimeout(t);
+  }, [step, onDone]);
 
   return (
     <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
@@ -108,8 +126,8 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
           left: "50%",
           top: "55%",
           transform: "translate(-50%, -50%)",
-          width: "clamp(360px, 35vw, 875px)",
-          height: "clamp(360px, 35vw, 875px)",
+          width: "clamp(360px, 30vw, 875px)",
+          height: "clamp(360px, 30vw, 875px)",
         }}
       >
         {["zielepfeil", "zielelinie"].map((img, i) => (
@@ -122,10 +140,7 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
               width: "100%",
               height: "100%",
               objectFit: "contain",
-              clipPath:
-                step > i
-                  ? "inset(0% 0% 0% 0%)"
-                  : "inset(100% 0% 0% 0%)",
+              clipPath: step > i ? "inset(0% 0% 0% 0%)" : "inset(100% 0% 0% 0%)",
               transition: "clip-path 1s ease-out",
             }}
           />
@@ -167,8 +182,8 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
               left: "50%",
               top: "55%",
               transform: "translate(-50%, -50%)",
-              width: "clamp(360px, 35vw, 875px)",
-              height: "clamp(360px, 35vw, 875px)",
+              width: "clamp(360px, 30vw, 875px)",
+              height: "clamp(360px, 30vw, 875px)",
             }}
           >
             <img
@@ -177,14 +192,8 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
                 width: "100%",
                 height: "100%",
                 objectFit: "contain",
-                clipPath:
-                  problemStep === p.index
-                    ? p.startClip
-                    : "inset(0% 0% 0% 0%)",
-                animation:
-                  problemStep === p.index
-                    ? "wipeIn 1.2s ease-out forwards"
-                    : undefined,
+                clipPath: problemStep === p.index ? p.startClip : "inset(0% 0% 0% 0%)",
+                animation: problemStep === p.index ? "wipeIn 1.2s ease-out forwards" : undefined,
               }}
             />
 
@@ -192,17 +201,19 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
               style={{
                 position: "absolute",
                 top: p.textY,
-                ...(p.side === "left"
-                  ? { left: p.textX }
-                  : { right: p.textX }),
+                ...(p.side === "left" ? { left: p.textX } : { right: p.textX }),
                 transform: "translate(-50%, -50%)",
                 fontSize: "clamp(22px, 2.4vw, 32px)",
                 fontWeight: 600,
                 color: "#002b5c",
                 whiteSpace: "nowrap",
-                opacity: problemStep > p.index ? 1 : 0,
-                animation: "textFadeIn 0.3s ease forwards",
-                animationDelay: "1.2s",
+                // Live: erst nach Linie; Export: sofort sichtbar
+                opacity: exportReady ? 1 : problemStep >= p.index ? 1 : 0,
+                animationName: exportReady ? "none" : "textFadeIn",
+                animationDuration: exportReady ? "0s" : "0.3s",
+                animationTimingFunction: "ease",
+                animationFillMode: "forwards",
+                animationDelay: exportReady ? "0s" : "1.2s",
               }}
             >
               {p.text}
@@ -227,10 +238,13 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
             <div
               key={t}
               style={{
-                opacity: 0,
+                opacity: exportReady ? 1 : 0,
                 paddingTop: "clamp(8px, 1.5vh, 12px)",
-                animation: "fadeIn 0.4s ease forwards",
-                animationDelay: `${i * 0.8}s`,
+                animationName: exportReady ? "none" : "fadeIn",
+                animationDuration: exportReady ? "0s" : "0.4s",
+                animationTimingFunction: "ease",
+                animationFillMode: "forwards",
+                animationDelay: exportReady ? "0s" : `${i * 0.8}s`,
               }}
             >
               ✔ {t}

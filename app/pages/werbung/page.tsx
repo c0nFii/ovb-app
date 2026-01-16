@@ -53,14 +53,11 @@ export default function WerbungPage() {
      ========================= */
 
   const handleWeiter = async () => {
-    // 👇 Button verstecken
+    
     setShowWeiterButton(false);
     
-    // 👇 Kurz warten, damit React rendern kann
     await new Promise(resolve => setTimeout(resolve, 50));
     
-    // 🔴 A4 Landscape Optimierung (297mm × 210mm ≈ 3508px × 2480px bei 300dpi)
-    // Wir nutzen Full HD (1920×1080) für kleinere Dateigröße
     const image = await exportPageContainerAsImage({
       containerId: "werbung-export",
       backgroundColor: "#ffffff",

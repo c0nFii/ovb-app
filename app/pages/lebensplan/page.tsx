@@ -7,8 +7,11 @@ import LaserPointer from "@/components/presentation/LaserPointer";
 import ExportArea from "@/components/export/ExportArea";
 import FlowController from "./FlowController"; // 👈 WICHTIG
 import { Path } from "@/components/presentation/DrawingSVG";
+import { useRouter } from "next/navigation";
+import { exportPageContainerAsImage } from "@/components/export/exportPages";
+import "@/components/export/export.css";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DrawingOverlay from "@/components/presentation/DrawingOverlay";
 
 export default function FinanziellerLebensplanPage() {
@@ -17,11 +20,56 @@ export default function FinanziellerLebensplanPage() {
   const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
   const TOPBAR_HEIGHT = 76;
 
+  const [flowCompleted, setFlowCompleted] = useState(false);
+  const [showWeiterButton, setShowWeiterButton] = useState(false);
+
+const router = useRouter();
+
+  /* =========================
+     BUTTON DELAY (2 SEK)
+     ========================= */
+
+  useEffect(() => {
+    if (!flowCompleted) return;
+
+    const t = setTimeout(() => {
+      setShowWeiterButton(true);
+    }, 2000);
+
+    return () => clearTimeout(t);
+  }, [flowCompleted]);
+
+  /* =========================
+     WEITER → EXPORT + NAV
+     ========================= */
+
+  const handleWeiter = async () => {
+    // 👇 Button verstecken
+    setShowWeiterButton(false);
+    
+    // 👇 Kurz warten, damit React rendern kann
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    // 🔴 A4 Landscape Optimierung
+    const image = await exportPageContainerAsImage({
+      containerId: "lebensplan-export",
+      backgroundColor: "#ffffff",
+      quality: 0.85,
+      targetWidth: 1920,  // 🔴 Zielgröße für A4
+      targetHeight: 1080, // 🔴 16:9 Format
+    });
+
+    sessionStorage.setItem("lebensplanScreenshot", image);
+
+    router.push("/pages/abs");
+  };
+
   return (
     <>
       <TopBar mode={mode} setMode={setMode} />
 
       <AppScreenWrapper>
+        <div className="lebensplan-export-container" id="lebensplan-export">
         <div
           style={{
             position: "absolute",
@@ -46,8 +94,19 @@ export default function FinanziellerLebensplanPage() {
 
 
           {/* 👇 HIER läuft jetzt der komplette Präsentations‑Flow */}
-          <FlowController />
+          <FlowController onComplete={() => setFlowCompleted(true)} />
+
         </div>
+        </div>
+        {/* 👇 Button AUSSERHALB des Export-Containers */}
+        {showWeiterButton && (
+          <button
+            className="werbung-weiter-button"
+            onClick={handleWeiter}
+          >
+            Weiter
+          </button>
+        )}
       </AppScreenWrapper>
     </>
   );

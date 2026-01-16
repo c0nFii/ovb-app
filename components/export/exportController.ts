@@ -17,6 +17,7 @@ export type ExportData = {
    ========================= */
 
 const SCREENSHOT_KEYS = {
+  lebensplan: "lebensplanScreenshot",
   werbung: "werbungScreenshot",
   empfehlung: "empfehlungScreenshot",
   // 👇 Einfach weitere Seiten hinzufügen:
