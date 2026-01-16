@@ -21,7 +21,6 @@ export default function WerbungPage() {
   const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
   const [showWerbung, setShowWerbung] = useState(false);
 
-  // 🔥 NEU: Flow Completion + Delay
   const [flowCompleted, setFlowCompleted] = useState(false);
   const [showWeiterButton, setShowWeiterButton] = useState(false);
 
@@ -60,9 +59,14 @@ export default function WerbungPage() {
     // 👇 Kurz warten, damit React rendern kann
     await new Promise(resolve => setTimeout(resolve, 50));
     
+    // 🔴 A4 Landscape Optimierung (297mm × 210mm ≈ 3508px × 2480px bei 300dpi)
+    // Wir nutzen Full HD (1920×1080) für kleinere Dateigröße
     const image = await exportPageContainerAsImage({
       containerId: "werbung-export",
-      pixelRatio: 1.5,
+      backgroundColor: "#ffffff",
+      quality: 0.85,
+      targetWidth: 1920,  // 🔴 Zielgröße für A4
+      targetHeight: 1080, // 🔴 16:9 Format
     });
 
     sessionStorage.setItem("werbungScreenshot", image);

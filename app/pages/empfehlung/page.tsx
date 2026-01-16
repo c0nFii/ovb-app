@@ -19,7 +19,6 @@ export default function EmpfehlungPage() {
     useState<"normal" | "draw" | "erase" | "laser">("normal");
   const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
   
-  // 🔥 NEU: Flow Completion + Button
   const [flowCompleted, setFlowCompleted] = useState(false);
   const [showWeiterButton, setShowWeiterButton] = useState(false);
 
@@ -50,9 +49,13 @@ export default function EmpfehlungPage() {
     // 👇 Kurz warten, damit React rendern kann
     await new Promise(resolve => setTimeout(resolve, 50));
     
+    // 🔴 A4 Landscape Optimierung
     const image = await exportPageContainerAsImage({
       containerId: "empfehlung-export",
-      pixelRatio: 1.5,
+      backgroundColor: "#ffffff",
+      quality: 0.85,
+      targetWidth: 1920,  // 🔴 Zielgröße für A4
+      targetHeight: 1080, // 🔴 16:9 Format
     });
 
     sessionStorage.setItem("empfehlungScreenshot", image);

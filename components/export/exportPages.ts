@@ -7,9 +7,10 @@ import html2canvas from "html2canvas";
 export type ExportPageOptions = {
   containerId: string;
   fileName?: string;
-  pixelRatio?: number;
   backgroundColor?: string;
-  quality?: number; // 👈 NEU
+  quality?: number;
+  targetWidth?: number; // 👈 NEU: Ziel-Breite
+  targetHeight?: number; // 👈 NEU: Ziel-Höhe
 };
 
 /* =========================
@@ -22,16 +23,18 @@ export async function exportPageContainer(
   const {
     containerId,
     fileName = "export.png",
-    pixelRatio = 2,
     backgroundColor = "#ffffff",
-    quality = 0.8, // 👈 NEU
+    quality = 0.8,
+    targetWidth,
+    targetHeight,
   } = options;
 
   const dataUrl = await exportPageContainerAsImage({
     containerId,
-    pixelRatio,
     backgroundColor,
     quality,
+    targetWidth,
+    targetHeight,
   });
 
   downloadImage(dataUrl, fileName);
@@ -46,27 +49,57 @@ export async function exportPageContainerAsImage(
 ): Promise<string> {
   const {
     containerId,
-    pixelRatio = 1, // 👈 REDUZIERT von 2 auf 1.5
     backgroundColor = "#ffffff",
-    quality = 0.8, // 👈 NEU: JPEG Qualität
+    quality = 0.8,
+    targetWidth = 1920,
+    targetHeight = 1080,
   } = options;
 
   const container = document.getElementById(containerId);
+  if (!container) throw new Error(`Export container not found: ${containerId}`);
 
-  if (!container) {
-    throw new Error(`Export container not found: ${containerId}`);
-  }
+  // 1) Clone the container (deep)
+  const clone = container.cloneNode(true) as HTMLElement;
+  
 
-  const canvas = await html2canvas(container, {
-    scale: pixelRatio,
+  // 2) Apply fixed export size to the clone and reset transforms
+  clone.style.width = `${targetWidth}px`;
+  clone.style.height = `${targetHeight}px`;
+  clone.style.position = "absolute";
+  clone.style.top = "-99999px";
+  clone.style.left = "-99999px";
+  clone.style.transform = "none";
+  clone.style.margin = "0";
+  clone.style.boxSizing = "border-box";
+  clone.style.background = backgroundColor;
+
+  // 3) Append clone to body so html2canvas can render it
+  document.body.appendChild(clone);
+
+  // 4) Wait a tick so fonts/images/rendering settle
+  await new Promise((r) => setTimeout(r, 50));
+
+  // 5) Compute scale for crispness (use devicePixelRatio or custom)
+  const deviceScale = window.devicePixelRatio || 1;
+  const canvas = await html2canvas(clone, {
+    scale: deviceScale, // quality multiplier
     backgroundColor,
     useCORS: true,
     logging: false,
+    width: targetWidth,
+    height: targetHeight,
+    windowWidth: targetWidth,
+    windowHeight: targetHeight,
+    foreignObjectRendering: false,
   });
 
-  // 👇 JPEG statt PNG (viel kleiner!)
+  // 6) Cleanup clone
+  document.body.removeChild(clone);
+
+  // 7) Return JPEG data URL
   return canvas.toDataURL("image/jpeg", quality);
 }
+
 
 /* =========================
    DOWNLOAD HELPER

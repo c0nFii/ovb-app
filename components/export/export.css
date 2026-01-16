@@ -1,17 +1,55 @@
 /* =========================
-   EXPORT CONTAINER
+   UI (sichtbar, responsive)
    ========================= */
 
 .werbung-export-container {
   position: relative;
-  width: 100%;
+  width: 100%;      /* UI bleibt responsive */
   height: 100%;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
-/* Optional, falls du mehrere Export-Seiten hast */
+/* Falls du mehrere Seiten innerhalb des Containers hast */
 .export-page {
   position: relative;
   width: 100%;
   height: 100%;
+}
+
+/* =========================
+   EXPORT (nur für den geklonten Export-Container)
+   Wird NICHT global auf das sichtbare UI angewendet.
+   Der Clone bekommt diese Klasse oder Inline-Styles.
+   ========================= */
+
+.export-clone {
+  position: absolute !important;
+  top: -99999px !important;   /* offscreen, nicht display:none */
+  left: -99999px !important;
+  width: 1920px !important;   /* feste Export-Breite */
+  height: 1080px !important;  /* feste Export-Höhe */
+  transform: none !important; /* keine Skalierung */
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  background: #ffffff !important; /* sicherer Hintergrund für JPEG */
+  z-index: 99999 !important; /* sicherstellen, dass Styles greifen */
+  visibility: visible !important; /* nicht hidden */
+  display: block !important; /* nicht none */
+}
+
+/* Wenn du Canvas-Elemente hast, stell sicher, dass sie sichtbar sind */
+.export-clone canvas {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* SVGs: behalten ihre Größe, aber Box-Sizing hilft */
+.export-clone svg {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: auto !important;
 }

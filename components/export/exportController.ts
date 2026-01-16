@@ -70,7 +70,7 @@ export async function exportKontaktbogenToPDF(
       doc.addPage("a4", "landscape");
     }
 
-    // 👇 Bild-Dimensionen berechnen
+    // 👇 Bild laden
     const img = new Image();
     img.src = image!;
     
@@ -78,25 +78,32 @@ export async function exportKontaktbogenToPDF(
       img.onload = () => {
         const imgWidth = img.width;
         const imgHeight = img.height;
-        const aspectRatio = imgHeight / imgWidth;
 
-        // 👇 A4 Querformat
-        const maxWidth = 297;
-        const maxHeight = 210;
+        // 👇 A4 Querformat in mm
+        const pageWidth = 297;
+        const pageHeight = 210;
 
-        // 👇 Erst Breite auf max setzen
-        let pdfWidth = maxWidth;
-        let pdfHeight = pdfWidth * aspectRatio;
+        // 🔴 KRITISCH: Aspect Ratios berechnen
+        const imgAspectRatio = imgWidth / imgHeight;
+        const pageAspectRatio = pageWidth / pageHeight;
 
-        // 👇 Wenn zu hoch → Höhe auf max + Breite proportional reduzieren
-        if (pdfHeight > maxHeight) {
-          pdfHeight = maxHeight;
-          pdfWidth = pdfHeight / aspectRatio;
+        let pdfWidth: number;
+        let pdfHeight: number;
+
+        // 🔴 Bild ist breiter als Seite → an Breite anpassen
+        if (imgAspectRatio > pageAspectRatio) {
+          pdfWidth = pageWidth;
+          pdfHeight = pageWidth / imgAspectRatio;
+        } 
+        // 🔴 Bild ist höher als Seite → an Höhe anpassen
+        else {
+          pdfHeight = pageHeight;
+          pdfWidth = pageHeight * imgAspectRatio;
         }
 
         // 👇 Zentrieren
-        const x = (maxWidth - pdfWidth) / 2;
-        const y = (maxHeight - pdfHeight) / 2;
+        const x = (pageWidth - pdfWidth) / 2;
+        const y = (pageHeight - pdfHeight) / 2;
 
         doc.addImage(
           image!,
@@ -104,7 +111,9 @@ export async function exportKontaktbogenToPDF(
           x,
           y,
           pdfWidth,
-          pdfHeight
+          pdfHeight,
+          undefined,
+          "FAST"
         );
 
         resolve();
@@ -147,7 +156,7 @@ export async function exportKontaktbogenToPDF(
     }, 100);
   }
 
-  // 🧹 Optional: Screenshots aus sessionStorage löschen
+  // 🧹 Screenshots aus sessionStorage löschen
   Object.values(SCREENSHOT_KEYS).forEach(key => {
     sessionStorage.removeItem(key);
   });

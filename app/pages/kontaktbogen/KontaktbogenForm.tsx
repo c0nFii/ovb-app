@@ -31,7 +31,7 @@ export default function KontaktbogenForm({
         paddingBottom: exportMode ? "40px" : "clamp(18px, 4vh, 32px)",
       }}
     >
-      {/* ===== PERSONEN GRID ===== */}
+        {/* ===== PERSONEN GRID ===== */
       <div
         style={{
           display: "grid",
@@ -106,7 +106,7 @@ export default function KontaktbogenForm({
           </div>
         ))}
       </div>
-
+}
       {/* ===== PAGE NAVIGATION ===== */}
       {showNavigation && page && setPage && (
         <div
