@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
-
 import LaserPointer from "@/components/presentation/LaserPointer";
 import PulseCircle from "@/components/presentation/PulseCircle";
 
@@ -49,6 +47,8 @@ export default function WerbungFlow({
      ========================= */
 
   const wipeStyle = (isNew: boolean): React.CSSProperties => ({
+    width: "100%",
+    height: "100%",
     objectFit: "contain",
     clipPath: isNew ? "inset(0 0 100% 0)" : "inset(0 0 0 0)",
     animation: isNew ? "wipeIn 3s ease forwards" : "none",
@@ -77,39 +77,39 @@ export default function WerbungFlow({
         >
           {step >= 0 && (
             <div style={{ position: "absolute", inset: 0 }}>
-              <Image src="/pictures/werbung.png" alt="" fill style={wipeStyle(step === 0)} />
+              <img src="/pictures/werbung.png" alt="" style={wipeStyle(step === 0)} />
             </div>
           )}
 
           {step >= 1 && (
             <div style={{ position: "absolute", inset: 0 }}>
-              <Image src="/pictures/kunde.png" alt="" fill style={wipeStyle(step === 1)} />
+              <img src="/pictures/kunde.png" alt="" style={wipeStyle(step === 1)} />
             </div>
           )}
 
           {step >= 2 && (
             <div style={{ position: "absolute", inset: 0 }}>
-              <Image src="/pictures/1000.png" alt="" fill style={wipeStyle(step === 2)} />
+              <img src="/pictures/1000.png" alt="" style={wipeStyle(step === 2)} />
             </div>
           )}
 
           {step >= 3 &&
             group200.map((img) => (
               <div key={img} style={{ position: "absolute", inset: 0 }}>
-                <Image src={`/pictures/${img}`} alt="" fill style={wipeStyle(step === 3)} />
+                <img src={`/pictures/${img}`} alt="" style={wipeStyle(step === 3)} />
               </div>
             ))}
 
           {step >= 4 && (
             <div style={{ position: "absolute", inset: 0 }}>
-              <Image src="/pictures/x1.png" alt="" fill style={wipeStyle(step === 4)} />
+              <img src="/pictures/x1.png" alt="" style={wipeStyle(step === 4)} />
             </div>
           )}
 
           {step >= 5 &&
             groupX.map((img) => (
               <div key={img} style={{ position: "absolute", inset: 0 }}>
-                <Image src={`/pictures/${img}`} alt="" fill style={wipeStyle(step === 5)} />
+                <img src={`/pictures/${img}`} alt="" style={wipeStyle(step === 5)} />
               </div>
             ))}
         </div>

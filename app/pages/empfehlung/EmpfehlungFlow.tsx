@@ -2,16 +2,13 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import PulseCircle from "@/components/presentation/PulseCircle";
 
 type EmpfehlungFlowProps = {
-  onComplete?: () => void; // 👈 NEU
+  onComplete?: () => void;
 };
 
 export default function EmpfehlungFlow({ onComplete }: EmpfehlungFlowProps) {
-  const router = useRouter();
-
   const [step, setStep] = useState(0);
   const [showRing, setShowRing] = useState(false);
   const [showWichtigButton, setShowWichtigButton] = useState(false);
@@ -21,11 +18,9 @@ export default function EmpfehlungFlow({ onComplete }: EmpfehlungFlowProps) {
     const timer = setTimeout(() => {
       setShowRing(true);
     }, 2000);
-
     return () => clearTimeout(timer);
   }, []);
 
-  // 🔥 WICHTIG: wichtig.png NICHT in der sequence
   const sequence = [
     "kfz.png",
     "kfzpfeil.png",
@@ -34,7 +29,7 @@ export default function EmpfehlungFlow({ onComplete }: EmpfehlungFlowProps) {
     "35.png",
     "steuern.png",
     "steuerpfeil.png",
-    "strich.png", // letzter normales Bild
+    "strich.png",
   ];
 
   const lastRingStep = sequence.length - 1;
@@ -55,7 +50,7 @@ export default function EmpfehlungFlow({ onComplete }: EmpfehlungFlowProps) {
     if (step === sequence.length) {
       const t = setTimeout(() => {
         setShowWichtigButton(true);
-        onComplete?.(); // 👈 NEU: Flow fertig!
+        onComplete?.();
       }, 1500);
       return () => clearTimeout(t);
     }
@@ -90,6 +85,9 @@ export default function EmpfehlungFlow({ onComplete }: EmpfehlungFlowProps) {
                 src={`/pictures/${img}`}
                 alt=""
                 fill
+                sizes="60vw"
+                quality={85}
+                priority={i === 0}
                 style={wipeStyle(step === i)}
               />
             </div>
@@ -112,7 +110,7 @@ export default function EmpfehlungFlow({ onComplete }: EmpfehlungFlowProps) {
         />
       )}
 
-      {/* WICHTIG.png als Info (kein Click mehr) */}
+      {/* WICHTIG.png */}
       {step === sequence.length && (
         <div
           style={{
@@ -123,7 +121,7 @@ export default function EmpfehlungFlow({ onComplete }: EmpfehlungFlowProps) {
             width: "clamp(300px, 60vw, 1400px)",
             height: "clamp(200px, 40vw, 1400px)",
             zIndex: 99999,
-            pointerEvents: "none", // 👈 kein Click mehr
+            pointerEvents: "none",
           }}
         >
           <Image
@@ -151,18 +149,6 @@ export default function EmpfehlungFlow({ onComplete }: EmpfehlungFlowProps) {
           }
           to {
             clip-path: inset(0 0 0 0);
-          }
-        }
-
-        @keyframes pulse {
-          0% {
-            transform: translate(-50%, -50%) scale(1);
-          }
-          50% {
-            transform: translate(-50%, -50%) scale(1.02);
-          }
-          100% {
-            transform: translate(-50%, -50%) scale(1);
           }
         }
       `}</style>

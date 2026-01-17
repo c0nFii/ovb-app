@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
-
 import LaserPointer from "@/components/presentation/LaserPointer";
 import PulseCircle from "@/components/presentation/PulseCircle";
 
@@ -78,11 +76,12 @@ export default function GrundSkel({
             pointerEvents: "none",
           }}
         >
-          <Image
+          <img
             src={`/pictures/${KREUZ_IMAGE}`}
             alt=""
-            fill
             style={{
+              width: "100%",
+              height: "100%",
               objectFit: "contain",
               clipPath: "inset(0 0 100% 0)",
               animation: `wipeIn ${KREUZ_ANIMATION_DURATION}ms ease forwards`,
