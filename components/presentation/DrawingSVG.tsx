@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { usePen } from "../layout/PenContext";
 
 /* =========================
@@ -34,13 +34,40 @@ export default function DrawingSVG({
   paths: Path[];
   setPaths: React.Dispatch<React.SetStateAction<Path[]>>;
 }) {
-  const svgRef = useRef<SVGSVGElement>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
   const lastPoint = useRef<Point | null>(null);
 
   const [currentPath, setCurrentPath] = useState<Path | null>(null);
+  const [svgSize, setSvgSize] = useState({ width: 1920, height: 1004 });
 
-  // 🔥 Globaler Pen
+  // Globaler Pen
   const { color, width } = usePen();
+
+  /* =========================
+     SVG SIZE DETECTION
+     ========================= */
+
+  useEffect(() => {
+    const updateSize = () => {
+      if (svgRef.current) {
+        const rect = svgRef.current.getBoundingClientRect();
+        setSvgSize({
+          width: Math.max(1, Math.round(rect.width)),
+          height: Math.max(1, Math.round(rect.height)),
+        });
+      }
+    };
+
+    updateSize();
+    // extra tick for stable layout
+    const t = window.setTimeout(updateSize, 100);
+
+    window.addEventListener("resize", updateSize);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener("resize", updateSize);
+    };
+  }, []);
 
   /* =========================
      HELPERS
@@ -111,7 +138,9 @@ export default function DrawingSVG({
     e.stopPropagation();
 
     const p = getPoint(e);
-    if (distance(p, lastPoint.current) < 1) return;
+
+    // Optimization: reduce threshold for smoother drawing
+    if (distance(p, lastPoint.current) < 0.5) return;
 
     lastPoint.current = p;
 
@@ -150,8 +179,8 @@ export default function DrawingSVG({
   return (
     <svg
       ref={svgRef}
-      viewBox="0 0 2560 1440"
-      preserveAspectRatio="none"
+      viewBox={`0 0 ${svgSize.width} ${svgSize.height}`}
+      preserveAspectRatio="xMidYMid meet"
       style={{
         position: "absolute",
         inset: 0,

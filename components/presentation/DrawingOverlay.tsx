@@ -13,7 +13,11 @@ export default function DrawingOverlay({
     <div
       style={{
         position: "absolute",
-        inset: 0,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        paddingTop: 76, // ✅ Gleiches Padding wie der Content!
         zIndex: 99999,
         pointerEvents: active ? "auto" : "none",
       }}

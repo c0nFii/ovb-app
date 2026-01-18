@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import PulseCircle from "@/components/presentation/PulseCircle";
 
 type EmpfehlungFlowProps = {
@@ -11,15 +10,6 @@ type EmpfehlungFlowProps = {
 export default function EmpfehlungFlow({ onComplete }: EmpfehlungFlowProps) {
   const [step, setStep] = useState(0);
   const [showRing, setShowRing] = useState(false);
-  const [showWichtigButton, setShowWichtigButton] = useState(false);
-
-  // Ring nach 2 Sekunden
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowRing(true);
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, []);
 
   const sequence = [
     "kfz.png",
@@ -32,37 +22,32 @@ export default function EmpfehlungFlow({ onComplete }: EmpfehlungFlowProps) {
     "strich.png",
   ];
 
-  const lastRingStep = sequence.length - 1;
+  const lastStep = sequence.length - 1;
+
+  // Ring nach 2 Sekunden (nur solange wir nicht beim letzten Bild sind)
+  useEffect(() => {
+    if (step >= lastStep) return;
+
+    const timer = setTimeout(() => {
+      setShowRing(true);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [step, lastStep]);
 
   const handleClick = () => {
+    if (step >= lastStep) return; // 🔒 Nach letztem Bild nichts mehr tun
+
     setShowRing(false);
     setStep((s) => s + 1);
-
-    if (step < lastRingStep) {
-      setTimeout(() => {
-        setShowRing(true);
-      }, 2000);
-    }
   };
 
-  // wichtig.png → nach 2s pulsieren + onComplete
+  // 🔴 SOFORT fertig, wenn letztes Bild erreicht ist
   useEffect(() => {
-    if (step === sequence.length) {
-      const t = setTimeout(() => {
-        setShowWichtigButton(true);
-        onComplete?.();
-      }, 1500);
-      return () => clearTimeout(t);
+    if (step === lastStep) {
+      onComplete?.();
     }
-  }, [step, onComplete]);
-
-  const wipeStyle = (isNew: boolean): React.CSSProperties => ({
-    objectFit: "contain",
-    position: "absolute",
-    inset: 0,
-    clipPath: isNew ? "inset(0 100% 0 0)" : "inset(0 0 0 0)",
-    animation: isNew ? "wipeIn 2s ease forwards" : "none",
-  });
+  }, [step, lastStep, onComplete]);
 
   return (
     <>
@@ -81,22 +66,43 @@ export default function EmpfehlungFlow({ onComplete }: EmpfehlungFlowProps) {
         {sequence.map((img, i) =>
           step >= i ? (
             <div key={img} style={{ position: "absolute", inset: 0 }}>
-              <Image
+              {/* Normales Bild */}
+              <img
                 src={`/pictures/${img}`}
                 alt=""
-                fill
-                sizes="60vw"
-                quality={85}
-                priority={i === 0}
-                style={wipeStyle(step === i)}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                  clipPath: step === i ? "inset(0 100% 0 0)" : "inset(0 0 0 0)",
+                  animation: step === i ? "wipeIn 2s ease forwards" : "none",
+                }}
               />
+
+              {/* wichtig.png – exakt gleiches Verhalten beim letzten Bild */}
+              {i === lastStep && step === lastStep && (
+                <img
+                  src="/pictures/wichtig.png"
+                  alt="Wichtig"
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
+                    top: 115,
+                    objectFit: "contain",
+                    clipPath: "inset(0 100% 0 0)",
+                    animation: "wipeIn 2s ease forwards",
+                  }}
+                />
+              )}
             </div>
           ) : null
         )}
       </div>
 
-      {/* Normaler Ring */}
-      {showRing && step <= lastRingStep && (
+      {/* Ring nur bis VOR dem letzten Bild */}
+      {showRing && step < lastStep && (
         <PulseCircle
           onClick={handleClick}
           style={{
@@ -110,38 +116,7 @@ export default function EmpfehlungFlow({ onComplete }: EmpfehlungFlowProps) {
         />
       )}
 
-      {/* WICHTIG.png */}
-      {step === sequence.length && (
-        <div
-          style={{
-            position: "absolute",
-            top: "60%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: "clamp(300px, 60vw, 1400px)",
-            height: "clamp(200px, 40vw, 1400px)",
-            zIndex: 99999,
-            pointerEvents: "none",
-          }}
-        >
-          <Image
-            src="/pictures/wichtig.png"
-            alt="Wichtig"
-            fill
-            style={{
-              objectFit: "contain",
-              clipPath: showWichtigButton
-                ? "inset(0 0 0 0)"
-                : "inset(0 100% 0 0)",
-              animation: showWichtigButton
-                ? "none"
-                : "wipeIn 2s ease forwards",
-            }}
-          />
-        </div>
-      )}
-
-      {/* Animationen */}
+      {/* Animation */}
       <style jsx>{`
         @keyframes wipeIn {
           from {

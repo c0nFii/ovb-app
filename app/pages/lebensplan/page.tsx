@@ -78,17 +78,17 @@ const router = useRouter();
             right: 0,
             bottom: 0,
           }}
-        >
+          >
           <LaserPointer mode={mode} />
 
           <DrawingOverlay active={mode === "draw" || mode === "erase"}>
-  <DrawingSVG
-    active={mode === "draw" || mode === "erase"}
-    erase={mode === "erase"}
-    paths={drawingPaths}
-    setPaths={setDrawingPaths}
-  />
-</DrawingOverlay>
+            <DrawingSVG
+            active={mode === "draw" || mode === "erase"}
+            erase={mode === "erase"}
+            paths={drawingPaths}
+            setPaths={setDrawingPaths}
+           />
+          </DrawingOverlay>
 
 
 

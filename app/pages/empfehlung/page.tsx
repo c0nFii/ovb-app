@@ -65,14 +65,15 @@ export default function EmpfehlungPage() {
 
       <AppScreenWrapper>
         <div className="werbung-export-container" id="empfehlung-export">
-          {/* 🔴 FIX: Inneres absolute div wie im Lebensplan */}
+          {/* 🔴 FIX: Inner Div startet bei 0, nicht bei TOPBAR_HEIGHT */}
           <div
             style={{
               position: "absolute",
-              top: TOPBAR_HEIGHT,
+              top: 0,      // ✅ Startet bei 0
               left: 0,
               right: 0,
               bottom: 0,
+              paddingTop: TOPBAR_HEIGHT, // ✅ Padding statt top-offset
             }}
           >
             <LaserPointer mode={mode} />
