@@ -4,10 +4,11 @@ import { useState, useEffect } from "react";
 import PulseCircle from "@/components/presentation/PulseCircle";
 
 type EmpfehlungFlowProps = {
+  containerHeight: number;
   onComplete?: () => void;
 };
 
-export default function EmpfehlungFlow({ onComplete }: EmpfehlungFlowProps) {
+export default function EmpfehlungFlow({ containerHeight, onComplete }: EmpfehlungFlowProps) {
   const [step, setStep] = useState(0);
   const [showRing, setShowRing] = useState(false);
 
@@ -24,7 +25,6 @@ export default function EmpfehlungFlow({ onComplete }: EmpfehlungFlowProps) {
 
   const lastStep = sequence.length - 1;
 
-  // Ring nach 2 Sekunden (nur solange wir nicht beim letzten Bild sind)
   useEffect(() => {
     if (step >= lastStep) return;
 
@@ -36,18 +36,18 @@ export default function EmpfehlungFlow({ onComplete }: EmpfehlungFlowProps) {
   }, [step, lastStep]);
 
   const handleClick = () => {
-    if (step >= lastStep) return; // 🔒 Nach letztem Bild nichts mehr tun
-
+    if (step >= lastStep) return;
     setShowRing(false);
     setStep((s) => s + 1);
   };
 
-  // 🔴 SOFORT fertig, wenn letztes Bild erreicht ist
   useEffect(() => {
     if (step === lastStep) {
       onComplete?.();
     }
   }, [step, lastStep, onComplete]);
+
+  const imageAreaHeight = Math.min(containerHeight * 0.55, 800);
 
   return (
     <>
@@ -58,15 +58,14 @@ export default function EmpfehlungFlow({ onComplete }: EmpfehlungFlowProps) {
           top: "50%",
           left: "50%",
           transform: "translate(-50%, -50%)",
-          width: "clamp(300px, 60vw, 1400px)",
-          height: "clamp(200px, 40vw, 1400px)",
+          width: "clamp(300px, 70vw, 1400px)",
+          height: imageAreaHeight,
           pointerEvents: "none",
         }}
       >
         {sequence.map((img, i) =>
           step >= i ? (
             <div key={img} style={{ position: "absolute", inset: 0 }}>
-              {/* Normales Bild */}
               <img
                 src={`/pictures/${img}`}
                 alt=""
@@ -74,12 +73,13 @@ export default function EmpfehlungFlow({ onComplete }: EmpfehlungFlowProps) {
                   width: "100%",
                   height: "100%",
                   objectFit: "contain",
+                  objectPosition: "center center",
                   clipPath: step === i ? "inset(0 100% 0 0)" : "inset(0 0 0 0)",
                   animation: step === i ? "wipeIn 2s ease forwards" : "none",
                 }}
               />
 
-              {/* wichtig.png – exakt gleiches Verhalten beim letzten Bild */}
+              {/* wichtig.png - Original Position */}
               {i === lastStep && step === lastStep && (
                 <img
                   src="/pictures/wichtig.png"
@@ -101,7 +101,7 @@ export default function EmpfehlungFlow({ onComplete }: EmpfehlungFlowProps) {
         )}
       </div>
 
-      {/* Ring nur bis VOR dem letzten Bild */}
+      {/* Ring */}
       {showRing && step < lastStep && (
         <PulseCircle
           onClick={handleClick}
@@ -116,7 +116,6 @@ export default function EmpfehlungFlow({ onComplete }: EmpfehlungFlowProps) {
         />
       )}
 
-      {/* Animation */}
       <style jsx>{`
         @keyframes wipeIn {
           from {

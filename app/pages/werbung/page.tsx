@@ -61,8 +61,6 @@ export default function WerbungPage() {
       containerId: "werbung-export",
       backgroundColor: "#ffffff",
       quality: 0.85,
-      targetWidth: 1920,
-      targetHeight: 1080,
     });
 
     sessionStorage.setItem("werbungScreenshot", image);
@@ -79,14 +77,13 @@ export default function WerbungPage() {
 
       <AppScreenWrapper>
         <div className="werbung-export-container" id="werbung-export">
-          {/* 🔴 FIX: Inneres absolute div wie im Lebensplan */}
           <div
             style={{
               position: "absolute",
-              top: TOPBAR_HEIGHT,
+              top: 0,
               left: 0,
-              right: 0,
-              bottom: 0,
+              width: "100vw",
+              height: "100vh",
             }}
           >
             <LaserPointer mode={mode} />

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -20,6 +20,15 @@ export const metadata: Metadata = {
   description: "created by Michael Hamader",
 };
 
+// Viewport als separate Export (Next.js 14+ Best Practice)
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,24 +36,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="de">
-      <head>
-        {/* FIX: Darstellung auf allen Geräten identisch */}
-        <meta
-          name="viewport"
-          content="width=1123, initial-scale=1, maximum-scale=1, user-scalable=no"
-        />
-      </head>
-
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        style={{
-          margin: 0,
-          padding: 0,
-          overflow: "hidden",
-          width: "1523px",   // <<< WICHTIG: gesamte Seite fixieren
-          height: "400px",   // <<< WICHTIG: gesamte Seite fixieren
-          backgroundColor: "#ffffff",
-        }}
       >
         <PenProvider>
           <NotesProvider>

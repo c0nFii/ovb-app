@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { usePen } from "../layout/PenContext";
 
 /* =========================
@@ -14,6 +14,10 @@ export type Path = {
 };
 
 type Point = { x: number; y: number };
+
+/* =========================
+   HELPERS
+   ========================= */
 
 function distance(a: Point, b: Point) {
   return Math.hypot(a.x - b.x, a.y - b.y);
@@ -34,46 +38,48 @@ export default function DrawingSVG({
   paths: Path[];
   setPaths: React.Dispatch<React.SetStateAction<Path[]>>;
 }) {
-  const svgRef = useRef<SVGSVGElement | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
   const lastPoint = useRef<Point | null>(null);
-
   const [currentPath, setCurrentPath] = useState<Path | null>(null);
-  const [svgSize, setSvgSize] = useState({ width: 1920, height: 1004 });
+  
+  // Dynamische viewBox basierend auf Container-Größe
+  const [viewBox, setViewBox] = useState({ width: 1920, height: 1080 });
 
-  // Globaler Pen
   const { color, width } = usePen();
 
   /* =========================
-     SVG SIZE DETECTION
+     VIEWBOX DYNAMISCH ANPASSEN
      ========================= */
 
   useEffect(() => {
-    const updateSize = () => {
+    const updateViewBox = () => {
       if (svgRef.current) {
         const rect = svgRef.current.getBoundingClientRect();
-        setSvgSize({
-          width: Math.max(1, Math.round(rect.width)),
-          height: Math.max(1, Math.round(rect.height)),
-        });
+        if (rect.width > 0 && rect.height > 0) {
+          setViewBox({
+            width: Math.round(rect.width),
+            height: Math.round(rect.height),
+          });
+        }
       }
     };
 
-    updateSize();
-    // extra tick for stable layout
-    const t = window.setTimeout(updateSize, 100);
+    updateViewBox();
+    const timeout = setTimeout(updateViewBox, 100);
 
-    window.addEventListener("resize", updateSize);
+    window.addEventListener("resize", updateViewBox);
+    
     return () => {
-      window.clearTimeout(t);
-      window.removeEventListener("resize", updateSize);
+      clearTimeout(timeout);
+      window.removeEventListener("resize", updateViewBox);
     };
   }, []);
 
   /* =========================
-     HELPERS
+     KOORDINATEN TRANSFORMATION
      ========================= */
 
-  const getPoint = (e: React.PointerEvent): Point => {
+  const getPoint = useCallback((e: React.PointerEvent): Point => {
     const svg = svgRef.current;
     if (!svg) return { x: 0, y: 0 };
 
@@ -84,32 +90,31 @@ export default function DrawingSVG({
     const screenCTM = svg.getScreenCTM();
     if (!screenCTM) return { x: 0, y: 0 };
 
-    const local = pt.matrixTransform(screenCTM.inverse());
-    return { x: local.x, y: local.y };
-  };
+    const svgPoint = pt.matrixTransform(screenCTM.inverse());
+    
+    return { 
+      x: Math.round(svgPoint.x * 100) / 100, 
+      y: Math.round(svgPoint.y * 100) / 100 
+    };
+  }, []);
 
-  const isPointNearPath = (point: Point, path: Path, radius = 12) => {
-    const points = path.d
-      .split("L")
-      .map((cmd) =>
-        cmd
-          .replace("M", "")
-          .trim()
-          .split(" ")
-          .map(Number)
-      )
-      .map(([x, y]) => ({ x, y }));
+  const isPointNearPath = useCallback((point: Point, path: Path, radius = 15) => {
+    const segments = path.d.split(/[ML]\s*/).filter(Boolean);
+    const points = segments.map((seg) => {
+      const coords = seg.trim().split(/\s+/).map(Number);
+      return { x: coords[0], y: coords[1] };
+    }).filter(p => !isNaN(p.x) && !isNaN(p.y));
 
     return points.some((p) => distance(p, point) < radius);
-  };
+  }, []);
 
   /* =========================
-     POINTER EVENTS
+     POINTER EVENTS - NUR PEN!
      ========================= */
 
-  const start = (e: React.PointerEvent<SVGSVGElement>) => {
-    if (!active) return;
-    if (e.pointerType !== "pen") return;
+  const handlePointerDown = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
+    // 🔴 NUR Stylus/Pen erlauben - KEIN Touch/Finger!
+    if (!active || e.pointerType !== "pen") return;
 
     e.preventDefault();
     e.stopPropagation();
@@ -119,28 +124,21 @@ export default function DrawingSVG({
     lastPoint.current = p;
 
     if (!erase) {
-      setCurrentPath({
-        d: `M ${p.x} ${p.y}`,
-        color,
-        width,
-      });
+      setCurrentPath({ d: `M ${p.x} ${p.y}`, color, width });
     } else {
       setPaths((prev) => prev.filter((path) => !isPointNearPath(p, path)));
     }
-  };
+  }, [active, erase, color, width, getPoint, isPointNearPath, setPaths]);
 
-  const move = (e: React.PointerEvent<SVGSVGElement>) => {
-    if (!active) return;
-    if (e.pointerType !== "pen") return;
-    if (!lastPoint.current) return;
+  const handlePointerMove = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
+    if (!active || e.pointerType !== "pen" || !lastPoint.current) return;
 
     e.preventDefault();
     e.stopPropagation();
 
     const p = getPoint(e);
-
-    // Optimization: reduce threshold for smoother drawing
-    if (distance(p, lastPoint.current) < 0.5) return;
+    
+    if (distance(p, lastPoint.current) < 1) return;
 
     lastPoint.current = p;
 
@@ -151,11 +149,10 @@ export default function DrawingSVG({
     } else {
       setPaths((prev) => prev.filter((path) => !isPointNearPath(p, path)));
     }
-  };
+  }, [active, erase, getPoint, isPointNearPath, setPaths]);
 
-  const end = (e: React.PointerEvent<SVGSVGElement>) => {
-    if (!active) return;
-    if (e.pointerType !== "pen") return;
+  const handlePointerEnd = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
+    if (!active || e.pointerType !== "pen") return;
 
     e.preventDefault();
     e.stopPropagation();
@@ -164,13 +161,13 @@ export default function DrawingSVG({
       e.currentTarget.releasePointerCapture(e.pointerId);
     }
 
-    if (!erase && currentPath) {
+    if (!erase && currentPath && currentPath.d.includes("L")) {
       setPaths((prev) => [...prev, currentPath]);
     }
 
     lastPoint.current = null;
     setCurrentPath(null);
-  };
+  }, [active, erase, currentPath, setPaths]);
 
   /* =========================
      RENDER
@@ -179,21 +176,23 @@ export default function DrawingSVG({
   return (
     <svg
       ref={svgRef}
-      viewBox={`0 0 ${svgSize.width} ${svgSize.height}`}
-      preserveAspectRatio="xMidYMid meet"
+      viewBox={`0 0 ${viewBox.width} ${viewBox.height}`}
+      preserveAspectRatio="xMidYMid slice"
       style={{
         position: "absolute",
-        inset: 0,
+        top: 0,
+        left: 0,
         width: "100%",
         height: "100%",
         zIndex: 9999,
         touchAction: "none",
+        pointerEvents: active ? "auto" : "none",
       }}
-      onPointerDown={start}
-      onPointerMove={move}
-      onPointerUp={end}
-      onPointerCancel={end}
-      onPointerLeave={end}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerEnd}
+      onPointerCancel={handlePointerEnd}
+      onPointerLeave={handlePointerEnd}
     >
       {paths.map((p, i) => (
         <path

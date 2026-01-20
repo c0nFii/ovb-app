@@ -55,8 +55,6 @@ const router = useRouter();
       containerId: "lebensplan-export",
       backgroundColor: "#ffffff",
       quality: 0.85,
-      targetWidth: 1920,  // 🔴 Zielgröße für A4
-      targetHeight: 1080, // 🔴 16:9 Format
     });
 
     sessionStorage.setItem("lebensplanScreenshot", image);
