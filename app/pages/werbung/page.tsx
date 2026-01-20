@@ -1,18 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect } from "react";
 import AppScreenWrapper from "@/components/AppScreenWrapper";
 import TopBar from "@/components/layout/TopBar";
 import PulseCircle from "@/components/presentation/PulseCircle";
 import GrundSkel from "./grundskel";
 import WerbungFlow from "./werbung";
-import DrawingOverlay from "@/components/presentation/DrawingOverlay";
 import DrawingSVG from "@/components/presentation/DrawingSVG";
 import LaserPointer from "@/components/presentation/LaserPointer";
 import { Path } from "@/components/presentation/DrawingSVG";
 import { exportPageContainerAsImage } from "@/components/export/exportPages";
 import "@/components/export/export.css";
 import { useRouter } from "next/navigation";
+
+const TOPBAR_HEIGHT = 66; // Feste TopBar Höhe (wie EmpfehlungPage)
 
 export default function WerbungPage() {
   const [started, setStarted] = useState(false);
@@ -24,8 +25,28 @@ export default function WerbungPage() {
   const [flowCompleted, setFlowCompleted] = useState(false);
   const [showWeiterButton, setShowWeiterButton] = useState(false);
 
+  const [contentHeight, setContentHeight] = useState(0);
+
   const router = useRouter();
-  const TOPBAR_HEIGHT = 76; // 👈 Gleich wie Lebensplan
+
+  /* =========================
+     CONTENT-HÖHE BERECHNEN
+     ========================= */
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const availableHeight = window.innerHeight - TOPBAR_HEIGHT;
+      setContentHeight(availableHeight);
+    };
+
+    measure();
+    window.addEventListener("resize", measure);
+    window.addEventListener("orientationchange", () => setTimeout(measure, 200));
+
+    return () => {
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
 
   /* =========================
      FLOW START
@@ -55,17 +76,23 @@ export default function WerbungPage() {
 
   const handleWeiter = async () => {
     setShowWeiterButton(false);
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise(resolve => setTimeout(resolve, 100));
     
-    const image = await exportPageContainerAsImage({
-      containerId: "werbung-export",
-      backgroundColor: "#ffffff",
-      quality: 0.85,
-    });
-
-    sessionStorage.setItem("werbungScreenshot", image);
+    try {
+      const image = await exportPageContainerAsImage({
+        containerId: "werbung-export",
+        backgroundColor: "#ffffff",
+        quality: 0.85,
+      });
+      sessionStorage.setItem("werbungScreenshot", image);
+    } catch (error) {
+      console.error("Export failed:", error);
+    }
+    
     router.push("/pages/empfehlung");
   };
+
+  const isDrawingActive = mode === "draw" || mode === "erase";
 
   /* =========================
      RENDER
@@ -73,62 +100,75 @@ export default function WerbungPage() {
 
   return (
     <>
+      {/* TopBar AUSSERHALB - immer klickbar */}
       <TopBar mode={mode} setMode={setMode} />
 
       <AppScreenWrapper>
-        <div className="werbung-export-container" id="werbung-export">
-          <div
+        {/* Export Container - beginnt unter TopBar */}
+        {contentHeight > 0 && (
+          <div 
+            id="werbung-export"
             style={{
               position: "absolute",
-              top: 0,
+              top: TOPBAR_HEIGHT,
               left: 0,
               width: "100vw",
-              height: "100vh",
+              height: contentHeight,
+              overflow: "hidden",
+              background: "#ffffff",
             }}
           >
-            <LaserPointer mode={mode} />
+            {/* Content Layer */}
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                zIndex: 1,
+              }}
+            >
+              <LaserPointer mode={mode} />
 
-            <DrawingOverlay active={mode === "draw" || mode === "erase"}>
-              <DrawingSVG
-                active={mode === "draw" || mode === "erase"}
-                erase={mode === "erase"}
-                paths={drawingPaths}
-                setPaths={setDrawingPaths}
-              />
-            </DrawingOverlay>
+              {!started && (
+                <PulseCircle
+                  onClick={() => setStarted(true)}
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    zIndex: 50,
+                    pointerEvents: "auto",
+                  }}
+                />
+              )}
 
-            {!started && (
-              <PulseCircle
-                onClick={() => setStarted(true)}
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  zIndex: 50,
-                  pointerEvents: "auto",
-                }}
-              />
-            )}
+              {started && (
+                <GrundSkel
+                  mode={mode}
+                  start={true}
+                  onFinish={handleFinish}
+                />
+              )}
 
-            {started && (
-              <GrundSkel
-                mode={mode}
-                start={true}
-                onFinish={handleFinish}
-              />
-            )}
+              {showWerbung && (
+                <WerbungFlow
+                  mode={mode}
+                  onComplete={() => setFlowCompleted(true)}
+                />
+              )}
+            </div>
 
-            {showWerbung && (
-              <WerbungFlow
-                mode={mode}
-                onComplete={() => setFlowCompleted(true)}
-              />
-            )}
+            {/* Drawing Layer - z-index unter TopBar */}
+            <DrawingSVG
+              active={isDrawingActive}
+              erase={mode === "erase"}
+              paths={drawingPaths}
+              setPaths={setDrawingPaths}
+            />
           </div>
-        </div>
+        )}
 
-        {/* 👇 Button AUSSERHALB des Export-Containers */}
+        {/* Weiter Button */}
         {showWeiterButton && (
           <button
             className="werbung-weiter-button"

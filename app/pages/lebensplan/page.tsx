@@ -1,29 +1,47 @@
 "use client";
 
+import { useEffect, useState, useLayoutEffect } from "react";
 import TopBar from "@/components/layout/TopBar";
 import AppScreenWrapper from "@/components/AppScreenWrapper";
 import DrawingSVG from "@/components/presentation/DrawingSVG";
 import LaserPointer from "@/components/presentation/LaserPointer";
-import ExportArea from "@/components/export/ExportArea";
-import FlowController from "./FlowController"; // 👈 WICHTIG
+import FlowController from "./FlowController";
 import { Path } from "@/components/presentation/DrawingSVG";
 import { useRouter } from "next/navigation";
 import { exportPageContainerAsImage } from "@/components/export/exportPages";
 import "@/components/export/export.css";
 
-import { useEffect, useState } from "react";
-import DrawingOverlay from "@/components/presentation/DrawingOverlay";
+const TOPBAR_HEIGHT = 66; // Feste TopBar Höhe (wie EmpfehlungPage)
 
 export default function FinanziellerLebensplanPage() {
   const [mode, setMode] =
     useState<"normal" | "draw" | "erase" | "laser">("normal");
   const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
-  const TOPBAR_HEIGHT = 76;
-
   const [flowCompleted, setFlowCompleted] = useState(false);
   const [showWeiterButton, setShowWeiterButton] = useState(false);
 
-const router = useRouter();
+  const [contentHeight, setContentHeight] = useState(0);
+
+  const router = useRouter();
+
+  /* =========================
+     CONTENT-HÖHE BERECHNEN
+     ========================= */
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const availableHeight = window.innerHeight - TOPBAR_HEIGHT;
+      setContentHeight(availableHeight);
+    };
+
+    measure();
+    window.addEventListener("resize", measure);
+    window.addEventListener("orientationchange", () => setTimeout(measure, 200));
+
+    return () => {
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
 
   /* =========================
      BUTTON DELAY (2 SEK)
@@ -44,64 +62,77 @@ const router = useRouter();
      ========================= */
 
   const handleWeiter = async () => {
-    // 👇 Button verstecken
     setShowWeiterButton(false);
-    
-    // 👇 Kurz warten, damit React rendern kann
-    await new Promise(resolve => setTimeout(resolve, 50));
-    
-    // 🔴 A4 Landscape Optimierung
-    const image = await exportPageContainerAsImage({
-      containerId: "lebensplan-export",
-      backgroundColor: "#ffffff",
-      quality: 0.85,
-    });
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
-    sessionStorage.setItem("lebensplanScreenshot", image);
+    try {
+      const image = await exportPageContainerAsImage({
+        containerId: "lebensplan-export",
+        backgroundColor: "#ffffff",
+        quality: 0.85,
+      });
+
+      if (typeof image === "string" && image.startsWith("data:image")) {
+        sessionStorage.setItem("lebensplanScreenshot", image);
+      } else {
+        console.warn("Export returned invalid image, skipping sessionStorage set.", image);
+      }
+    } catch (error) {
+      console.error("Export failed:", error);
+    }
 
     router.push("/pages/abs");
   };
 
+  const isDrawingActive = mode === "draw" || mode === "erase";
+
   return (
     <>
+      {/* TopBar AUSSERHALB - immer klickbar */}
       <TopBar mode={mode} setMode={setMode} />
 
       <AppScreenWrapper>
-        <div className="lebensplan-export-container" id="lebensplan-export">
-        <div
-          style={{
-            position: "absolute",
-            top: TOPBAR_HEIGHT,
-            left: 0,
-            right: 0,
-            bottom: 0,
-          }}
+        {/* Export Container - beginnt unter TopBar */}
+        {contentHeight > 0 && (
+          <div
+            id="lebensplan-export"
+            style={{
+              position: "absolute",
+              top: TOPBAR_HEIGHT,
+              left: 0,
+              width: "100vw",
+              height: contentHeight,
+              overflow: "hidden",
+              background: "#ffffff",
+            }}
           >
-          <LaserPointer mode={mode} />
+            {/* Content Layer */}
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                zIndex: 1,
+              }}
+            >
+              <LaserPointer mode={mode} />
 
-          <DrawingOverlay active={mode === "draw" || mode === "erase"}>
+              {/* Präsentations-Flow */}
+              <FlowController onComplete={() => setFlowCompleted(true)} />
+            </div>
+
+            {/* Drawing Layer - z-index unter TopBar */}
             <DrawingSVG
-            active={mode === "draw" || mode === "erase"}
-            erase={mode === "erase"}
-            paths={drawingPaths}
-            setPaths={setDrawingPaths}
-           />
-          </DrawingOverlay>
+              active={isDrawingActive}
+              erase={mode === "erase"}
+              paths={drawingPaths}
+              setPaths={setDrawingPaths}
+            />
+          </div>
+        )}
 
-
-
-
-          {/* 👇 HIER läuft jetzt der komplette Präsentations‑Flow */}
-          <FlowController onComplete={() => setFlowCompleted(true)} />
-
-        </div>
-        </div>
-        {/* 👇 Button AUSSERHALB des Export-Containers */}
+        {/* Weiter Button */}
         {showWeiterButton && (
-          <button
-            className="werbung-weiter-button"
-            onClick={handleWeiter}
-          >
+          <button className="werbung-weiter-button" onClick={handleWeiter}>
             Weiter
           </button>
         )}

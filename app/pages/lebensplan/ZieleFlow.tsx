@@ -104,7 +104,6 @@ export default function ZieleFlow({ onDone }: { onDone?: () => void }) {
       style={{
         position: "absolute",
         inset: 0,
-        padding: "clamp(20px, 5vh, 60px)",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",

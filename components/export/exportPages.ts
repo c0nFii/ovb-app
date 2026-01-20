@@ -1,8 +1,62 @@
 "use client";
 
 import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
-import { exportKontaktbogenTextPDF, Person } from "./exportText";
+
+/**
+ * Wait until all <img> inside container are loaded and have naturalWidth > 0.
+ * Tries to set crossOrigin="anonymous" for non-data URLs to help html2canvas.
+ */
+async function ensureImagesLoaded(container: HTMLElement, timeout = 3000) {
+  const imgs = Array.from(container.querySelectorAll("img"));
+  if (imgs.length === 0) return;
+
+  const promises = imgs.map((img) => {
+    return new Promise<void>((resolve, reject) => {
+      // If already loaded and valid
+      if (img.complete && img.naturalWidth && img.naturalWidth > 0) {
+        return resolve();
+      }
+
+      // Try to set crossOrigin if it's an http(s) URL and not a data URL
+      try {
+        const src = img.getAttribute("src") || "";
+        if (!src.startsWith("data:") && /^https?:\/\//.test(src)) {
+          // Only set if not already set
+          if (!img.crossOrigin) img.crossOrigin = "anonymous";
+        }
+      } catch {
+        // ignore
+      }
+
+      const onLoad = () => {
+        cleanup();
+        // naturalWidth check to avoid 0×0 images
+        if (img.naturalWidth && img.naturalWidth > 0) resolve();
+        else reject(new Error("Image loaded but has zero naturalWidth"));
+      };
+      const onError = (ev: any) => {
+        cleanup();
+        reject(new Error("Image failed to load: " + (img.src || "unknown")));
+      };
+      const cleanup = () => {
+        img.removeEventListener("load", onLoad);
+        img.removeEventListener("error", onError);
+      };
+
+      img.addEventListener("load", onLoad);
+      img.addEventListener("error", onError);
+
+      // Fallback timeout
+      setTimeout(() => {
+        cleanup();
+        if (img.complete && img.naturalWidth && img.naturalWidth > 0) resolve();
+        else reject(new Error("Image load timeout: " + (img.src || "unknown")));
+      }, timeout);
+    });
+  });
+
+  await Promise.all(promises);
+}
 
 /* =========================
    TYPES
@@ -15,114 +69,8 @@ export type ExportPageOptions = {
   quality?: number;
 };
 
-export type ExportData = {
-  geberName: string;
-  personen: Person[];
-  notes?: string;
-  onCleanupDialog?: (show: boolean) => void;
-};
-
 /* =========================
-   SCREENSHOT KEYS
-   ========================= */
-
-const SCREENSHOT_KEYS = {
-  lebensplan: "lebensplanScreenshot",
-  werbung: "werbungScreenshot",
-  empfehlung: "empfehlungScreenshot",
-} as const;
-
-/* =========================
-   DEBUG POPUP
-   ========================= */
-
-function showDebugPopup(title: string, debugData: object): Promise<void> {
-  return new Promise((resolve) => {
-    const overlay = document.createElement("div");
-    overlay.style.cssText = `
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.8);
-      z-index: 999999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    `;
-
-    const popup = document.createElement("div");
-    popup.style.cssText = `
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      max-width: 90vw;
-      max-height: 80vh;
-      overflow: auto;
-      font-family: monospace;
-      font-size: 14px;
-    `;
-
-    const jsonText = JSON.stringify(debugData, null, 2);
-
-    popup.innerHTML = `
-      <h3 style="margin-top: 0; color: #333;">${title}</h3>
-      <p style="color: #666; font-size: 12px;">Kopiere diesen Text:</p>
-      <textarea 
-        id="debug-text" 
-        readonly 
-        style="
-          width: 100%;
-          height: 250px;
-          font-family: monospace;
-          font-size: 11px;
-          padding: 10px;
-          border: 1px solid #ccc;
-          border-radius: 8px;
-          resize: none;
-        "
-      >${jsonText}</textarea>
-      <div style="margin-top: 15px; display: flex; gap: 10px;">
-        <button id="copy-btn" style="
-          flex: 1;
-          padding: 12px;
-          background: #007bff;
-          color: white;
-          border: none;
-          border-radius: 8px;
-          font-size: 16px;
-        ">📋 Kopieren</button>
-        <button id="close-btn" style="
-          flex: 1;
-          padding: 12px;
-          background: #28a745;
-          color: white;
-          border: none;
-          border-radius: 8px;
-          font-size: 16px;
-        ">✓ Weiter</button>
-      </div>
-    `;
-
-    overlay.appendChild(popup);
-    document.body.appendChild(overlay);
-
-    document.getElementById("copy-btn")?.addEventListener("click", () => {
-      const textarea = document.getElementById("debug-text") as HTMLTextAreaElement;
-      textarea.select();
-      document.execCommand("copy");
-      const btn = document.getElementById("copy-btn");
-      if (btn) btn.textContent = "✓ Kopiert!";
-    });
-
-    document.getElementById("close-btn")?.addEventListener("click", () => {
-      document.body.removeChild(overlay);
-      resolve();
-    });
-  });
-}
-
-/* =========================
-   EXPORT MIT DEBUG
+   EXPORT
    ========================= */
 
 export async function exportPageContainerAsImage(
@@ -137,155 +85,51 @@ export async function exportPageContainerAsImage(
   const container = document.getElementById(containerId);
   if (!container) throw new Error(`Container not found: ${containerId}`);
 
+  // Ensure container is visible and has size
   const rect = container.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) {
+    throw new Error(`Container has zero size: ${containerId} (${rect.width}x${rect.height})`);
+  }
 
-  const canvas = await html2canvas(container, {
-    backgroundColor,
-    useCORS: true,
-    logging: false,
-    scale: 1,
-  });
+  // Wait for images inside container to be loaded (helps avoid data:, and tainted canvas)
+  try {
+    await ensureImagesLoaded(container, 4000);
+  } catch (e) {
+    // Provide a clear error so caller can react (re-capture etc.)
+    throw new Error("Not all images loaded inside container: " + (e as Error).message);
+  }
 
-  const dataUrl = canvas.toDataURL("image/jpeg", quality);
+  // html2canvas options: useCORS true helps when crossOrigin is set on images
+  let canvas: HTMLCanvasElement;
+  try {
+    canvas = await html2canvas(container, {
+      backgroundColor,
+      useCORS: true,
+      logging: false,
+      scale: Math.max(1, window.devicePixelRatio || 1),
+    });
+  } catch (e) {
+    throw new Error("html2canvas failed: " + (e as Error).message);
+  }
 
-  // Debug Info für Screenshot
-  await showDebugPopup("📸 Screenshot erstellt", {
-    container: {
-      width: rect.width,
-      height: rect.height,
-      ratio: (rect.width / rect.height).toFixed(4),
-    },
-    canvas: {
-      width: canvas.width,
-      height: canvas.height,
-      ratio: (canvas.width / canvas.height).toFixed(4),
-    },
-    dataUrl: {
-      length: dataUrl.length,
-      startsWithJpeg: dataUrl.startsWith("data:image/jpeg"),
-      first100chars: dataUrl.substring(0, 100),
-    },
-  });
+  // Validate canvas
+  if (!canvas || canvas.width === 0 || canvas.height === 0) {
+    throw new Error("html2canvas produced an empty canvas");
+  }
+
+  // Convert to data URL and validate
+  let dataUrl: string;
+  try {
+    dataUrl = canvas.toDataURL("image/jpeg", quality);
+  } catch (e) {
+    throw new Error("canvas.toDataURL failed (possible tainted canvas / CORS): " + (e as Error).message);
+  }
+
+  if (!dataUrl || !dataUrl.startsWith("data:image")) {
+    throw new Error("Invalid data URL produced by canvas: " + String(dataUrl).slice(0, 80));
+  }
 
   return dataUrl;
-}
-
-/* =========================
-   PDF EXPORT MIT DEBUG
-   ========================= */
-
-export async function exportKontaktbogenToPDF(
-  data: ExportData
-): Promise<void> {
-  const { geberName, personen, notes, onCleanupDialog } = data;
-
-  // Debug: Was ist im sessionStorage?
-  const storageDebug: Record<string, any> = {};
-  Object.entries(SCREENSHOT_KEYS).forEach(([name, key]) => {
-    const value = sessionStorage.getItem(key);
-    storageDebug[name] = {
-      key: key,
-      exists: value !== null,
-      length: value?.length ?? 0,
-      startsCorrectly: value?.startsWith("data:image/") ?? false,
-    };
-  });
-
-  await showDebugPopup("📦 SessionStorage Check", {
-    expectedKeys: SCREENSHOT_KEYS,
-    found: storageDebug,
-  });
-
-  const screenshots = Object.entries(SCREENSHOT_KEYS)
-    .map(([name, key]) => ({ name, image: sessionStorage.getItem(key) }))
-    .filter((s) => s.image) as { name: string; image: string }[];
-
-  if (screenshots.length === 0) {
-    await showDebugPopup("⚠️ Keine Screenshots!", {
-      message: "SessionStorage enthält keine Screenshots",
-      storage: storageDebug,
-    });
-    
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-    await exportKontaktbogenTextPDF({ geberName, personen, notes, doc });
-    doc.save(`Firmenvorstellung-${geberName}.pdf`);
-    return;
-  }
-
-  // Screenshot-Infos sammeln
-  const screenshotInfo = await Promise.all(
-    screenshots.map(async (s) => {
-      const img = await loadImage(s.image);
-      return {
-        name: s.name,
-        width: img.width,
-        height: img.height,
-        ratio: (img.width / img.height).toFixed(4),
-      };
-    })
-  );
-
-  const firstImg = await loadImage(screenshots[0].image);
-  const orientation = firstImg.width > firstImg.height ? "landscape" : "portrait";
-  
-  const doc = new jsPDF({
-    orientation,
-    unit: "mm",
-    format: "a4",
-  });
-
-  const pageWidth = orientation === "landscape" ? 297 : 210;
-  const pageHeight = orientation === "landscape" ? 210 : 297;
-
-  const pdfDebugInfo: any[] = [];
-
-  for (let i = 0; i < screenshots.length; i++) {
-    if (i > 0) doc.addPage("a4", orientation);
-
-    const img = await loadImage(screenshots[i].image);
-    const imgRatio = img.width / img.height;
-    const pageRatio = pageWidth / pageHeight;
-
-    let w: number, h: number;
-    
-    if (imgRatio > pageRatio) {
-      w = pageWidth;
-      h = pageWidth / imgRatio;
-    } else {
-      h = pageHeight;
-      w = pageHeight * imgRatio;
-    }
-
-    const x = (pageWidth - w) / 2;
-    const y = (pageHeight - h) / 2;
-
-    pdfDebugInfo.push({
-      page: i + 1,
-      name: screenshots[i].name,
-      image: { width: img.width, height: img.height, ratio: imgRatio.toFixed(4) },
-      pdfPlacement: { w: w.toFixed(2), h: h.toFixed(2), x: x.toFixed(2), y: y.toFixed(2) },
-    });
-
-    doc.addImage(screenshots[i].image, "JPEG", x, y, w, h, undefined, "FAST");
-  }
-
-  await showDebugPopup("📄 PDF Erstellung", {
-    orientation,
-    pageSize: { width: pageWidth, height: pageHeight },
-    screenshotsUsed: screenshotInfo,
-    pdfPages: pdfDebugInfo,
-  });
-
-  doc.addPage("a4", "portrait");
-  await exportKontaktbogenTextPDF({ geberName, personen, notes, doc });
-
-  doc.save(`Firmenvorstellung-${geberName}.pdf`);
-
-  if (onCleanupDialog) {
-    setTimeout(() => onCleanupDialog(true), 100);
-  }
-
-  Object.values(SCREENSHOT_KEYS).forEach((key) => sessionStorage.removeItem(key));
 }
 
 /* =========================
@@ -297,18 +141,9 @@ export async function exportPageContainer(
 ): Promise<void> {
   const { fileName = "export.jpg", ...rest } = options;
   const dataUrl = await exportPageContainerAsImage(rest);
-  
+
   const link = document.createElement("a");
   link.href = dataUrl;
   link.download = fileName;
   link.click();
-}
-
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-  });
 }

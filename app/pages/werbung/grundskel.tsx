@@ -80,9 +80,10 @@ export default function GrundSkel({
             src={`/pictures/${KREUZ_IMAGE}`}
             alt=""
             style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "contain",
+              maxWidth: "100%",
+              maxHeight: "100%", 
+              width: "auto",
+              height: "auto",
               clipPath: "inset(0 0 100% 0)",
               animation: `wipeIn ${KREUZ_ANIMATION_DURATION}ms ease forwards`,
             }}

@@ -124,10 +124,10 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
         style={{
           position: "absolute",
           left: "50%",
-          top: "55%",
+          top: "52%",
           transform: "translate(-50%, -50%)",
-          width: "clamp(360px, 30vw, 875px)",
-          height: "clamp(360px, 30vw, 875px)",
+          width: "clamp(320px, 23vw, 675px)",
+          height: "clamp(320px, 23vw, 675px)",
         }}
       >
         {["zielepfeil", "zielelinie"].map((img, i) => (
@@ -139,7 +139,8 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
               inset: 0,
               width: "100%",
               height: "100%",
-              objectFit: "contain",
+              maxWidth: "auto%",
+              maxHeight: "auto%",
               clipPath: step > i ? "inset(0% 0% 0% 0%)" : "inset(100% 0% 0% 0%)",
               transition: "clip-path 1s ease-out",
             }}
@@ -154,15 +155,15 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
           index: 1,
           startClip: "inset(0% 0% 0% 100%)",
           side: "right",
-          textX: "calc(80% + clamp(5px, 4vh, 63px))",
-          textY: "68%",
+          textX: "calc(75% + clamp(5px, 4vh, 63px))",
+          textY: "75%",
         },
         {
           text: "Unfall",
           index: 2,
           startClip: "inset(0% 100% 0% 0%)",
           side: "left",
-          textX: "calc(99% + clamp(30px, 2.5vh, 85px))",
+          textX: "calc(105% + clamp(30px, 2.5vh, 85px))",
           textY: "45%",
         },
         {
@@ -170,8 +171,8 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
           index: 3,
           startClip: "inset(0% 0% 0% 100%)",
           side: "right",
-          textX: "calc(90% + clamp(-20px, 3vh, 120px))",
-          textY: "23%",
+          textX: "calc(87% + clamp(-20px, 3vh, 120px))",
+          textY: "17%",
         },
       ].map((p) =>
         problemStep >= p.index ? (
@@ -180,10 +181,10 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
             style={{
               position: "absolute",
               left: "50%",
-              top: "55%",
+              top: "52%",
               transform: "translate(-50%, -50%)",
-              width: "clamp(360px, 30vw, 875px)",
-              height: "clamp(360px, 30vw, 875px)",
+              width: "clamp(320px, 23vw, 675px)",
+          height: "clamp(320px, 23vw, 675px)",
             }}
           >
             <img
@@ -191,7 +192,8 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
               style={{
                 width: "100%",
                 height: "100%",
-                objectFit: "contain",
+                maxWidth: "auto%",
+                maxHeight: "auto%",
                 clipPath: problemStep === p.index ? p.startClip : "inset(0% 0% 0% 0%)",
                 animation: problemStep === p.index ? "wipeIn 1.2s ease-out forwards" : undefined,
               }}
@@ -261,7 +263,7 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
           }}
           style={{
             position: "absolute",
-            left: "clamp(120px, 22vw, 240px)",
+            left: "clamp(60px, 30vw, 180px)",
             top: "50%",
             transform: "translateY(-50%)",
             cursor: "pointer",

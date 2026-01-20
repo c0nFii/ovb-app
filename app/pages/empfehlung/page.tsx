@@ -11,6 +11,8 @@ import { Path } from "@/components/presentation/DrawingSVG";
 import { exportPageContainerAsImage } from "@/components/export/exportPages";
 import { useRouter } from "next/navigation";
 
+const TOPBAR_HEIGHT = 66; // Feste TopBar Höhe (50px Icon + 8px padding oben/unten)
+
 export default function EmpfehlungPage() {
   const [started, setStarted] = useState(false);
   const [mode, setMode] = useState<"normal" | "draw" | "erase" | "laser">("normal");
@@ -18,45 +20,21 @@ export default function EmpfehlungPage() {
   const [flowCompleted, setFlowCompleted] = useState(false);
   const [showWeiterButton, setShowWeiterButton] = useState(false);
   
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const topBarRef = useRef<HTMLDivElement>(null);
-  const [contentArea, setContentArea] = useState({ top: 0, height: 0, ready: false });
+  const [contentHeight, setContentHeight] = useState(0);
 
   const router = useRouter();
 
   /* =========================
-     CONTENT-BEREICH MESSEN
+     CONTENT-HÖHE BERECHNEN
      ========================= */
 
   useLayoutEffect(() => {
     const measure = () => {
-      if (wrapperRef.current && topBarRef.current) {
-        const wrapperRect = wrapperRef.current.getBoundingClientRect();
-        const topBarRect = topBarRef.current.getBoundingClientRect();
-        
-        // Content beginnt direkt nach TopBar
-        const topBarBottom = topBarRect.bottom - wrapperRect.top;
-        const availableHeight = wrapperRect.height - topBarBottom;
-        
-        setContentArea({
-          top: topBarBottom,
-          height: availableHeight,
-          ready: true,
-        });
-        
-        console.log("📐 Gemessen:", { 
-          wrapperHeight: wrapperRect.height,
-          topBarBottom,
-          availableHeight 
-        });
-      }
+      const availableHeight = window.innerHeight - TOPBAR_HEIGHT;
+      setContentHeight(availableHeight);
     };
 
-    // Initial + verzögert für Safe-Area
     measure();
-    setTimeout(measure, 100);
-    setTimeout(measure, 300);
-
     window.addEventListener("resize", measure);
     window.addEventListener("orientationchange", () => setTimeout(measure, 200));
 
@@ -99,31 +77,21 @@ export default function EmpfehlungPage() {
   const isDrawingActive = mode === "draw" || mode === "erase";
 
   return (
-    <AppScreenWrapper>
-      {/* Wrapper für Messungen */}
-      <div 
-        ref={wrapperRef} 
-        style={{ 
-          position: "absolute", 
-          inset: 0,
-          overflow: "hidden",
-        }}
-      >
-        {/* TopBar mit Ref */}
-        <div ref={topBarRef}>
-          <TopBar mode={mode} setMode={setMode} />
-        </div>
+    <>
+      {/* TopBar AUSSERHALB - immer klickbar */}
+      <TopBar mode={mode} setMode={setMode} />
 
-        {/* Export Container - nur rendern wenn gemessen */}
-        {contentArea.ready && (
+      <AppScreenWrapper>
+        {/* Export Container - beginnt unter TopBar */}
+        {contentHeight > 0 && (
           <div 
             id="empfehlung-export"
             style={{
               position: "absolute",
-              top: contentArea.top,
+              top: TOPBAR_HEIGHT,
               left: 0,
-              width: "100%",
-              height: contentArea.height,
+              width: "100vw",
+              height: contentHeight,
               overflow: "hidden",
               background: "#ffffff",
             }}
@@ -154,13 +122,13 @@ export default function EmpfehlungPage() {
 
               {started && (
                 <EmpfehlungFlow 
-                  containerHeight={contentArea.height}
+                  containerHeight={contentHeight}
                   onComplete={() => setFlowCompleted(true)}
                 />
               )}
             </div>
 
-            {/* Drawing Layer */}
+            {/* Drawing Layer - z-index unter TopBar */}
             <DrawingSVG
               active={isDrawingActive}
               erase={mode === "erase"}
@@ -179,7 +147,7 @@ export default function EmpfehlungPage() {
             Weiter
           </button>
         )}
-      </div>
-    </AppScreenWrapper>
+      </AppScreenWrapper>
+    </>
   );
 }

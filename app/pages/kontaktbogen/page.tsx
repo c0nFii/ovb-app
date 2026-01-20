@@ -108,14 +108,58 @@ export default function KontaktbogenPage() {
     setIsExporting(true);
 
     try {
+      // Optional: kurz loggen, was wir exportieren (hilft beim Debug)
+      console.log("Export start:", {
+        geberName,
+        personsCount: personen.filter((p) => p.name.trim() !== "").length,
+        notesLength: notes.text?.length ?? 0,
+      });
+
       await exportKontaktbogenToPDF({
         geberName,
         personen: personen.filter((p) => p.name.trim() !== ""),
         notes: notes.text,
         onCleanupDialog: setShowCleanupDialog,
       });
-    } catch (error) {
-      console.error("Export failed:", error);
+    } catch (err) {
+  try {
+    // 1) Wenn es ein Error ist, zeig message + stack
+    if (err instanceof Error) {
+      console.error("Export failed (Error):", err.message, err.stack);
+      return;
+    }
+
+    // 2) Wenn es ein DOMException (z.B. tainted canvas) ist
+    if (typeof DOMException !== "undefined" && err instanceof DOMException) {
+      console.error("Export failed (DOMException):", err.name, err.message, err.code);
+      return;
+    }
+
+    // 3) Wenn es ein Event‑like Objekt (isTrusted) ist
+    if (err && typeof err === "object" && "isTrusted" in err) {
+      console.error("Export failed (Event-like):", {
+        type: (err as any).type,
+        isTrusted: (err as any).isTrusted,
+        detail: (err as any).detail ?? null,
+      });
+      console.dir(err);
+      return;
+    }
+
+    // 4) Fallback: versuche zu serialisieren
+    let serialized = "";
+    try {
+      serialized = JSON.stringify(err, Object.getOwnPropertyNames(err), 2);
+    } catch {
+      serialized = String(err);
+    }
+    console.error("Export failed (non-Error):", serialized);
+    console.dir(err);
+  } catch (logErr) {
+    console.error("Export failed and logging failed:", logErr);
+  }
+
+
     } finally {
       setIsExporting(false);
       setShowNameDialog(false);

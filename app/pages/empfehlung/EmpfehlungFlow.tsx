@@ -47,59 +47,71 @@ export default function EmpfehlungFlow({ containerHeight, onComplete }: Empfehlu
     }
   }, [step, lastStep, onComplete]);
 
-  const imageAreaHeight = Math.min(containerHeight * 0.55, 800);
+  // Bildbereich: 80% der Container-Höhe, max 800px
+  const imageHeight = Math.min(containerHeight * 0.8, 800);
+  // Breite proportional zur Höhe basierend auf Bild-Ratio (2318/1180 ≈ 1.96)
+  const imageWidth = imageHeight * 1.96;
 
   return (
     <>
-      {/* Bildbereich */}
+      {/* Bildbereich - zentriert */}
       <div
         style={{
           position: "absolute",
-          top: "50%",
+          top: "45%",
           left: "50%",
           transform: "translate(-50%, -50%)",
-          width: "clamp(300px, 70vw, 1400px)",
-          height: imageAreaHeight,
+          width: imageWidth,
+          height: imageHeight,
+          maxWidth: "95%",
           pointerEvents: "none",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
         {sequence.map((img, i) =>
           step >= i ? (
-            <div key={img} style={{ position: "absolute", inset: 0 }}>
-              <img
-                src={`/pictures/${img}`}
-                alt=""
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "contain",
-                  objectPosition: "center center",
-                  clipPath: step === i ? "inset(0 100% 0 0)" : "inset(0 0 0 0)",
-                  animation: step === i ? "wipeIn 2s ease forwards" : "none",
-                }}
-              />
-
-              {/* wichtig.png - Original Position */}
-              {i === lastStep && step === lastStep && (
-                <img
-                  src="/pictures/wichtig.png"
-                  alt="Wichtig"
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    width: "100%",
-                    height: "100%",
-                    top: 115,
-                    objectFit: "contain",
-                    clipPath: "inset(0 100% 0 0)",
-                    animation: "wipeIn 2s ease forwards",
-                  }}
-                />
-              )}
-            </div>
+            <img
+              key={img}
+              src={`/pictures/${img}`}
+              alt=""
+              style={{
+                position: "absolute",
+                // KEINE width/height 100%! Stattdessen max-width/max-height
+                maxWidth: "90%",
+                maxHeight: "90%",
+                // Automatische Größe, behält Ratio
+                width: "auto",
+                height: "auto",
+                clipPath: step === i ? "inset(0 100% 0 0)" : "inset(0 0 0 0)",
+                animation: step === i ? "wipeIn 2s ease forwards" : "none",
+              }}
+            />
           ) : null
         )}
+
+        {/* wichtig.png - separat */}
+        {step === lastStep && (
+          <img
+            src="/pictures/wichtig.png"
+            alt="Wichtig"
+            style={{
+              position: "absolute",
+              maxWidth: "90%",
+              maxHeight: "90%",
+              top: "-5%",
+              width: "auto",
+              height: "auto",
+              marginTop: imageHeight * 0.27, // 13.5% * 2 ≈ 27% offset
+              clipPath: "inset(0 100% 0 0)",
+              animation: "wipeIn 2s ease forwards",
+            }}
+          />
+        )}
       </div>
+
+
 
       {/* Ring */}
       {showRing && step < lastStep && (

@@ -39,24 +39,25 @@ export default function DrawingSVG({
   setPaths: React.Dispatch<React.SetStateAction<Path[]>>;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const lastPoint = useRef<Point | null>(null);
   const [currentPath, setCurrentPath] = useState<Path | null>(null);
   
-  // Dynamische viewBox basierend auf Container-Größe
-  const [viewBox, setViewBox] = useState({ width: 1920, height: 1080 });
+  // Container-Größe für viewBox
+  const [size, setSize] = useState({ width: 1920, height: 1080 });
 
   const { color, width } = usePen();
 
   /* =========================
-     VIEWBOX DYNAMISCH ANPASSEN
+     CONTAINER-GRÖSSE MESSEN
      ========================= */
 
   useEffect(() => {
-    const updateViewBox = () => {
-      if (svgRef.current) {
-        const rect = svgRef.current.getBoundingClientRect();
+    const updateSize = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
         if (rect.width > 0 && rect.height > 0) {
-          setViewBox({
+          setSize({
             width: Math.round(rect.width),
             height: Math.round(rect.height),
           });
@@ -64,19 +65,15 @@ export default function DrawingSVG({
       }
     };
 
-    updateViewBox();
-    const timeout = setTimeout(updateViewBox, 100);
+    updateSize();
+    setTimeout(updateSize, 100);
 
-    window.addEventListener("resize", updateViewBox);
-    
-    return () => {
-      clearTimeout(timeout);
-      window.removeEventListener("resize", updateViewBox);
-    };
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
   }, []);
 
   /* =========================
-     KOORDINATEN TRANSFORMATION
+     KOORDINATEN
      ========================= */
 
   const getPoint = useCallback((e: React.PointerEvent): Point => {
@@ -109,11 +106,10 @@ export default function DrawingSVG({
   }, []);
 
   /* =========================
-     POINTER EVENTS - NUR PEN!
+     POINTER EVENTS - NUR PEN
      ========================= */
 
   const handlePointerDown = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
-    // 🔴 NUR Stylus/Pen erlauben - KEIN Touch/Finger!
     if (!active || e.pointerType !== "pen") return;
 
     e.preventDefault();
@@ -174,50 +170,58 @@ export default function DrawingSVG({
      ========================= */
 
   return (
-    <svg
-      ref={svgRef}
-      viewBox={`0 0 ${viewBox.width} ${viewBox.height}`}
-      preserveAspectRatio="xMidYMid slice"
+    <div
+      ref={containerRef}
       style={{
         position: "absolute",
-        top: 0,
-        left: 0,
-        width: "100%",
-        height: "100%",
-        zIndex: 9999,
-        touchAction: "none",
+        inset: 0,
+        zIndex: 100, // Unter TopBar (9999), über Content
         pointerEvents: active ? "auto" : "none",
       }}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerEnd}
-      onPointerCancel={handlePointerEnd}
-      onPointerLeave={handlePointerEnd}
     >
-      {paths.map((p, i) => (
-        <path
-          key={i}
-          d={p.d}
-          fill="none"
-          stroke={p.color}
-          strokeWidth={p.width}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
-        />
-      ))}
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${size.width} ${size.height}`}
+        preserveAspectRatio="none"
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          touchAction: "none",
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
+        onPointerLeave={handlePointerEnd}
+      >
+        {paths.map((p, i) => (
+          <path
+            key={i}
+            d={p.d}
+            fill="none"
+            stroke={p.color}
+            strokeWidth={p.width}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
 
-      {currentPath && !erase && (
-        <path
-          d={currentPath.d}
-          fill="none"
-          stroke={currentPath.color}
-          strokeWidth={currentPath.width}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
-        />
-      )}
-    </svg>
+        {currentPath && !erase && (
+          <path
+            d={currentPath.d}
+            fill="none"
+            stroke={currentPath.color}
+            strokeWidth={currentPath.width}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        )}
+      </svg>
+    </div>
   );
 }

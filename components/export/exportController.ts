@@ -20,10 +20,20 @@ const SCREENSHOT_KEYS = {
   lebensplan: "lebensplanScreenshot",
   werbung: "werbungScreenshot",
   empfehlung: "empfehlungScreenshot",
-  // 👇 Einfach weitere Seiten hinzufügen:
-  // produkte: "produkteScreenshot",
-  // beratung: "beratungScreenshot",
 } as const;
+
+/* =========================
+   HELPER
+   ========================= */
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
 
 /* =========================
    CONTROLLER
@@ -39,125 +49,62 @@ export async function exportKontaktbogenToPDF(
     onCleanupDialog,
   } = data;
 
-  /* =========================
-     📸 SCREENSHOTS AUS SESSION STORAGE
-     ========================= */
+  const screenshots = Object.entries(SCREENSHOT_KEYS)
+    .map(([key, storageKey]) => ({
+      name: key,
+      image: sessionStorage.getItem(storageKey),
+    }))
+    .filter(s => s.image) as { name: string; image: string }[];
 
-  const screenshots = Object.entries(SCREENSHOT_KEYS).map(([key, storageKey]) => ({
-    name: key,
-    image: sessionStorage.getItem(storageKey),
-  })).filter(s => s.image); // Nur vorhandene
+  if (screenshots.length === 0) {
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    await exportKontaktbogenTextPDF({ geberName, personen, notes, doc });
+    doc.save(`Firmenvorstellung-${geberName}.pdf`);
+    return;
+  }
 
-  const hasScreenshots = screenshots.length > 0;
-
-  /* =========================
-     PDF INITIALISIEREN
-     ========================= */
+  // PDF erstellen mit Custom-Größe basierend auf erstem Bild
+  const firstImg = await loadImage(screenshots[0].image);
+  const scale = 297 / firstImg.width;
+  const pdfWidth = firstImg.width * scale;
+  const pdfHeight = firstImg.height * scale;
 
   const doc = new jsPDF({
-    orientation: hasScreenshots ? "landscape" : "portrait",
+    orientation: "landscape",
     unit: "mm",
-    format: "a4",
+    format: [pdfWidth, pdfHeight],
   });
-
-  /* =========================
-     1️⃣ ALLE SCREENSHOTS EINFÜGEN (FIT TO A4)
-     ========================= */
 
   for (let i = 0; i < screenshots.length; i++) {
-    const { image } = screenshots[i];
-    
+    const img = await loadImage(screenshots[i].image);
+    const imgScale = 297 / img.width;
+    const pageWidth = img.width * imgScale;
+    const pageHeight = img.height * imgScale;
+
     if (i > 0) {
-      doc.addPage("a4", "landscape");
+      doc.addPage([pageWidth, pageHeight], "landscape");
     }
 
-    // 👇 Bild laden
-    const img = new Image();
-    img.src = image!;
-    
-    await new Promise<void>((resolve) => {
-      img.onload = () => {
-        const imgWidth = img.width;
-        const imgHeight = img.height;
-
-        // 👇 A4 Querformat in mm
-        const pageWidth = 297;
-        const pageHeight = 210;
-
-        // 🔴 KRITISCH: Aspect Ratios berechnen
-        const imgAspectRatio = imgWidth / imgHeight;
-        const pageAspectRatio = pageWidth / pageHeight;
-
-        let pdfWidth: number;
-        let pdfHeight: number;
-
-        // 🔴 Bild ist breiter als Seite → an Breite anpassen
-        if (imgAspectRatio > pageAspectRatio) {
-          pdfWidth = pageWidth;
-          pdfHeight = pageWidth / imgAspectRatio;
-        } 
-        // 🔴 Bild ist höher als Seite → an Höhe anpassen
-        else {
-          pdfHeight = pageHeight;
-          pdfWidth = pageHeight * imgAspectRatio;
-        }
-
-        // 👇 Zentrieren
-        const x = (pageWidth - pdfWidth) / 2;
-        const y = (pageHeight - pdfHeight) / 2;
-
-        doc.addImage(
-          image!,
-          "JPEG",
-          x,
-          y,
-          pdfWidth,
-          pdfHeight,
-          undefined,
-          "FAST"
-        );
-
-        resolve();
-      };
-    });
+    doc.addImage(
+      screenshots[i].image,
+      "JPEG",
+      0, 0,
+      pageWidth, pageHeight,
+      undefined,
+      "FAST"
+    );
   }
 
-  /* =========================
-     🔄 WECHSEL ZU PORTRAIT (nur bei Screenshots)
-     ========================= */
-
-  if (hasScreenshots) {
-    doc.addPage("a4", "portrait");
-  }
-
-  /* =========================
-     2️⃣ TEXT (NOTIZEN + EMPFEHLUNGEN)
-     ========================= */
-
-  await exportKontaktbogenTextPDF({
-    geberName,
-    personen,
-    notes,
-    doc,
-  });
-
-  /* =========================
-     DOWNLOAD
-     ========================= */
+  // Textseite A4 Portrait
+  doc.addPage([210, 297], "portrait");
+  await exportKontaktbogenTextPDF({ geberName, personen, notes, doc });
 
   doc.save(`Firmenvorstellung-${geberName}.pdf`);
 
-  /* =========================
-     CLEANUP
-     ========================= */
-
   if (onCleanupDialog) {
-    setTimeout(() => {
-      onCleanupDialog(true);
-    }, 100);
+    setTimeout(() => onCleanupDialog(true), 100);
   }
 
-  // 🧹 Screenshots aus sessionStorage löschen
   Object.values(SCREENSHOT_KEYS).forEach(key => {
     sessionStorage.removeItem(key);
   });

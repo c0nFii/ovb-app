@@ -47,9 +47,10 @@ export default function WerbungFlow({
      ========================= */
 
   const wipeStyle = (isNew: boolean): React.CSSProperties => ({
-    width: "100%",
-    height: "100%",
-    objectFit: "contain",
+    maxWidth: "100%",
+    maxHeight: "100%", 
+    width: "auto",
+    height: "auto",
     clipPath: isNew ? "inset(0 0 100% 0)" : "inset(0 0 0 0)",
     animation: isNew ? "wipeIn 3s ease forwards" : "none",
   });
