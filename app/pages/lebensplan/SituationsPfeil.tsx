@@ -13,7 +13,6 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
   const [problemStep, setProblemStep] = useState(0);
   const [exportReady, setExportReady] = useState(false);
 
-  // Alle Timer sauber tracken
   const timers = useRef<number[]>([]);
 
   const addTimer = (fn: () => void, ms: number) => {
@@ -55,71 +54,235 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
     // Ring erst nach AMS (3. Linie + Text)
     addTimer(() => {
       setShowRing(true);
-    }, 2400 + 1200); // wipe 3 + text fade
+    }, 2400 + 1200);
 
     return clearAllTimers;
   }, [step]);
 
-  /* =========================
-     FLOW COMPLETED → exportReady + onDone
-     ========================= */
-
+  // FLOW COMPLETED
   useEffect(() => {
     if (step < 4) return;
 
-    // Warte kurz, damit die finale "Schnell" Animation starten kann,
-    // dann setze exportReady und melde onDone an die Parent-Komponente.
     const t = setTimeout(() => {
-      setExportReady(true); // finalen, stabilen Zustand erzwingen (für Export)
+      setExportReady(true);
       onDone?.();
-    }, 1200); // Wartezeit wie vorher (kann angepasst werden)
+    }, 1200);
 
     return () => clearTimeout(t);
   }, [step, onDone]);
 
   return (
     <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-      {/* PRODUKTE */}
-      <div
+      
+      {/* ==========================================
+          SVG LAYER FÜR ALLE TEXTE
+          ========================================== */}
+      <svg
         style={{
           position: "absolute",
-          left: "50%",
-          bottom: "calc(1% + clamp(12px, 6vh, 84px) - 15px)",
-          transform: "translateX(-45%)",
-          display: "grid",
-          gridTemplateColumns: "auto auto",
-          columnGap: "clamp(130px, 18vw, 260px)",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          pointerEvents: "none",
+          overflow: "visible",
         }}
+        preserveAspectRatio="none"
       >
-        {[leftProducts, rightProducts].map((side, idx) => (
-          <div
-            key={idx}
+        <defs>
+          <style>{`
+            @keyframes svgTextFadeIn {
+              from { opacity: 0; }
+              to { opacity: 1; }
+            }
+            @keyframes svgFadeIn {
+              from { opacity: 0; }
+              to { opacity: 1; }
+            }
+          `}</style>
+        </defs>
+
+        {/* PRODUKTE LINKS - mit transition wie Original */}
+        <text
+          x="42%"
+          y="82%"
+          fill="#002b5c"
+          fontSize="clamp(18px, 2.2vw, 26px)"
+          fontWeight={500}
+          textAnchor="end"
+          dominantBaseline="middle"
+          style={{
+            opacity: showProducts ? 1 : 0,
+            transition: "opacity 0.4s ease",
+          }}
+        >
+          LV
+        </text>
+        <text
+          x="42%"
+          y="94%"
+          fill="#002b5c"
+          fontSize="clamp(18px, 2.2vw, 26px)"
+          fontWeight={500}
+          textAnchor="end"
+          dominantBaseline="middle"
+          style={{
+            opacity: showProducts ? 1 : 0,
+            transition: "opacity 0.4s ease",
+          }}
+        >
+          Kredit
+        </text>
+
+        {/* PRODUKTE RECHTS - mit transition wie Original */}
+        <text
+          x="58%"
+          y="82%"
+          fill="#002b5c"
+          fontSize="clamp(18px, 2.2vw, 26px)"
+          fontWeight={500}
+          textAnchor="start"
+          dominantBaseline="middle"
+          style={{
+            opacity: showProducts ? 1 : 0,
+            transition: "opacity 0.4s ease",
+          }}
+        >
+          Konto
+        </text>
+        <text
+          x="58%"
+          y="94%"
+          fill="#002b5c"
+          fontSize="clamp(18px, 2.2vw, 26px)"
+          fontWeight={500}
+          textAnchor="start"
+          dominantBaseline="middle"
+          style={{
+            opacity: showProducts ? 1 : 0,
+            transition: "opacity 0.4s ease",
+          }}
+        >
+          Sparbuch
+        </text>
+
+        {/* KRANKHEIT - Animation wie Original: 1.2s delay, 0.3s duration */}
+        {problemStep >= 1 && (
+          <text
+            x="32%"
+            y="65%"
+            fill="#002b5c"
+            fontSize="clamp(22px, 2.4vw, 32px)"
+            fontWeight={600}
+            textAnchor="middle"
+            dominantBaseline="middle"
             style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "clamp(12px, 2vh, 20px)",
-              alignItems: idx === 0 ? "flex-end" : "flex-start",
+              opacity: exportReady ? 1 : 0,
+              animation: exportReady ? "none" : "svgTextFadeIn 0.3s ease forwards 1.2s",
             }}
           >
-            {side.map((p) => (
-              <div
-                key={p}
-                style={{
-                  fontSize: "clamp(18px, 2.2vw, 26px)",
-                  fontWeight: 500,
-                  color: "#002b5c",
-                  opacity: showProducts ? 1 : 0,
-                  transition: "opacity 0.4s ease",
-                }}
-              >
-                {p}
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
+            Krankheit
+          </text>
+        )}
 
-      {/* ZIELE-PFEIL + LINIE */}
+        {/* UNFALL - Animation wie Original: 1.2s delay, 0.3s duration */}
+        {problemStep >= 2 && (
+          <text
+            x="65%"
+            y="50%"
+            fill="#002b5c"
+            fontSize="clamp(22px, 2.4vw, 32px)"
+            fontWeight={600}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            style={{
+              opacity: exportReady ? 1 : 0,
+              animation: exportReady ? "none" : "svgTextFadeIn 0.3s ease forwards 1.2s",
+            }}
+          >
+            Unfall
+          </text>
+        )}
+
+        {/* AMS - Animation wie Original: 1.2s delay, 0.3s duration */}
+        {problemStep >= 3 && (
+          <text
+            x="34.5%"
+            y="35%"
+            fill="#002b5c"
+            fontSize="clamp(22px, 2.4vw, 32px)"
+            fontWeight={600}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            style={{
+              opacity: exportReady ? 1 : 0,
+              animation: exportReady ? "none" : "svgTextFadeIn 0.3s ease forwards 1.2s",
+            }}
+          >
+            AMS
+          </text>
+        )}
+
+        {/* SCHNELL - Animation: 0.4s duration, 0s delay */}
+        {step >= 4 && (
+          <text
+            x="80%"
+            y="40%"
+            fill="#1a8f3c"
+            fontSize="clamp(18px, 2vw, 26px)"
+            fontWeight={600}
+            textAnchor="start"
+            dominantBaseline="middle"
+            style={{
+              opacity: exportReady ? 1 : 0,
+              animation: exportReady ? "none" : "svgFadeIn 0.4s ease forwards 0s",
+            }}
+          >
+            ✔ Schnell
+          </text>
+        )}
+
+        {/* SICHER - Animation: 0.4s duration, 0.8s delay */}
+        {step >= 4 && (
+          <text
+            x="80%"
+            y="47%"
+            fill="#1a8f3c"
+            fontSize="clamp(18px, 2vw, 26px)"
+            fontWeight={600}
+            textAnchor="start"
+            dominantBaseline="middle"
+            style={{
+              opacity: exportReady ? 1 : 0,
+              animation: exportReady ? "none" : "svgFadeIn 0.4s ease forwards 0.8s",
+            }}
+          >
+            ✔ Sicher
+          </text>
+        )}
+
+        {/* GÜNSTIG - Animation: 0.4s duration, 1.6s delay */}
+        {step >= 4 && (
+          <text
+            x="80%"
+            y="54%"
+            fill="#1a8f3c"
+            fontSize="clamp(18px, 2vw, 26px)"
+            fontWeight={600}
+            textAnchor="start"
+            dominantBaseline="middle"
+            style={{
+              opacity: exportReady ? 1 : 0,
+              animation: exportReady ? "none" : "svgFadeIn 0.4s ease forwards 1.6s",
+            }}
+          >
+            ✔ günstig
+          </text>
+        )}
+      </svg>
+
+      {/* ==========================================
+          ZIELE-PFEIL + LINIE
+          ========================================== */}
       <div
         style={{
           position: "absolute",
@@ -148,43 +311,33 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
         ))}
       </div>
 
-      {/* PROBLEMLINIEN */}
+      {/* ==========================================
+          PROBLEMLINIEN (nur Bilder)
+          ========================================== */}
       {[
         {
-          text: "Krankheit",
           index: 1,
           startClip: "inset(0% 0% 0% 100%)",
-          side: "right",
-          textX: "calc(75% + clamp(5px, 4vh, 63px))",
-          textY: "75%",
         },
         {
-          text: "Unfall",
           index: 2,
           startClip: "inset(0% 100% 0% 0%)",
-          side: "left",
-          textX: "calc(105% + clamp(30px, 2.5vh, 85px))",
-          textY: "45%",
         },
         {
-          text: "AMS",
           index: 3,
           startClip: "inset(0% 0% 0% 100%)",
-          side: "right",
-          textX: "calc(87% + clamp(-20px, 3vh, 120px))",
-          textY: "17%",
         },
       ].map((p) =>
         problemStep >= p.index ? (
           <div
-            key={p.text}
+            key={p.index}
             style={{
               position: "absolute",
               left: "50%",
               top: "52%",
               transform: "translate(-50%, -50%)",
               width: "clamp(320px, 23vw, 675px)",
-          height: "clamp(320px, 23vw, 675px)",
+              height: "clamp(320px, 23vw, 675px)",
             }}
           >
             <img
@@ -198,61 +351,8 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
                 animation: problemStep === p.index ? "wipeIn 1.2s ease-out forwards" : undefined,
               }}
             />
-
-            <div
-              style={{
-                position: "absolute",
-                top: p.textY,
-                ...(p.side === "left" ? { left: p.textX } : { right: p.textX }),
-                transform: "translate(-50%, -50%)",
-                fontSize: "clamp(22px, 2.4vw, 32px)",
-                fontWeight: 600,
-                color: "#002b5c",
-                whiteSpace: "nowrap",
-                // Live: erst nach Linie; Export: sofort sichtbar
-                opacity: exportReady ? 1 : problemStep >= p.index ? 1 : 0,
-                animationName: exportReady ? "none" : "textFadeIn",
-                animationDuration: exportReady ? "0s" : "0.3s",
-                animationTimingFunction: "ease",
-                animationFillMode: "forwards",
-                animationDelay: exportReady ? "0s" : "1.2s",
-              }}
-            >
-              {p.text}
-            </div>
           </div>
         ) : null
-      )}
-
-      {/* ABSCHLUSS */}
-      {step >= 4 && (
-        <div
-          style={{
-            position: "absolute",
-            right: "10%",
-            top: "40%",
-            color: "#1a8f3c",
-            fontSize: "clamp(18px, 2vw, 26px)",
-            fontWeight: 600,
-          }}
-        >
-          {["Schnell", "Sicher", "günstig"].map((t, i) => (
-            <div
-              key={t}
-              style={{
-                opacity: exportReady ? 1 : 0,
-                paddingTop: "clamp(8px, 1.5vh, 12px)",
-                animationName: exportReady ? "none" : "fadeIn",
-                animationDuration: exportReady ? "0s" : "0.4s",
-                animationTimingFunction: "ease",
-                animationFillMode: "forwards",
-                animationDelay: exportReady ? "0s" : `${i * 0.8}s`,
-              }}
-            >
-              ✔ {t}
-            </div>
-          ))}
-        </div>
       )}
 
       {/* RING */}
@@ -278,16 +378,6 @@ export default function ProduktePfeilFlow({ onDone }: { onDone?: () => void }) {
         @keyframes wipeIn {
           to {
             clip-path: inset(0% 0% 0% 0%);
-          }
-        }
-        @keyframes textFadeIn {
-          to {
-            opacity: 1;
-          }
-        }
-        @keyframes fadeIn {
-          to {
-            opacity: 1;
           }
         }
       `}</style>

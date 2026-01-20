@@ -17,6 +17,7 @@ export type ExportData = {
    ========================= */
 
 const SCREENSHOT_KEYS = {
+  kapitalnarkt: "kapitalmarktScreenshot",
   lebensplan: "lebensplanScreenshot",
   werbung: "werbungScreenshot",
   empfehlung: "empfehlungScreenshot",

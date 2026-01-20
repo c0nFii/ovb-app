@@ -119,8 +119,9 @@ export default function EmpfehlungFlow({ containerHeight, onComplete }: Empfehlu
           onClick={handleClick}
           style={{
             position: "absolute",
-            top: "80%",
+            top: "75%",
             left: "20%",
+            scale: 0.7,
             transform: "translate(-50%, -50%)",
             zIndex: 9999,
             pointerEvents: "auto",

@@ -25,14 +25,15 @@ export default function OVBHints({ side }: OVBHintsProps) {
         alignItems: "center",
         gap: "clamp(8px, 2vw, 16px)",
 
-        fontSize: "clamp(20px, 3vw, 32px)",
-        color: "#002b5c",
+        fontSize: "clamp(15px, 2vw, 24px)",
+        color: "#003879",
         zIndex: 100,
       }}
     >
       <span
         style={{
           fontSize: "clamp(26px, 4vw, 40px)",
+          color: "#003879"
         }}
       >
         {isLeft ? "" : "✔️"}

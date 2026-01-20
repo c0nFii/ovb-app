@@ -109,12 +109,72 @@ export default function ZieleFlow({ onDone }: { onDone?: () => void }) {
         alignItems: "center",
       }}
     >
-      {/* HAUPTÜBERSCHRIFT */}
+      {/* ==========================================
+          SVG LAYER FÜR ALLE TEXTE
+          ========================================== */}
+      <svg
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          pointerEvents: "none",
+          overflow: "visible",
+        }}
+        preserveAspectRatio="none"
+      >
+        {/* HAUPTÜBERSCHRIFT - immer sichtbar */}
+        <text
+          x="50%"
+          y="2%"
+          fill="#002b5c"
+          fontSize="clamp(20px, 2.5vw, 32px)"
+          fontWeight={600}
+          textAnchor="middle"
+          dominantBaseline="hanging"
+        >
+          Finanzieller Lebensweg
+        </text>
+
+        {/* ZIELE - mit opacity transition wie Original */}
+        <text
+          x="50%"
+          y="14%"
+          fill="#002b5c"
+          fontSize="clamp(24px, 3vw, 32px)"
+          fontWeight={600}
+          textAnchor="middle"
+          dominantBaseline="hanging"
+          style={{
+            opacity: step >= 1 ? 1 : 0,
+            transition: "opacity 0.3s ease",
+          }}
+        >
+          Ziele
+        </text>
+
+        {/* SITUATION - erscheint direkt wenn showSituation true */}
+        {showSituation && (
+          <text
+            x="50%"
+            y="88%"
+            fill="#002b5c"
+            fontSize="clamp(24px, 3vw, 32px)"
+            fontWeight={600}
+            textAnchor="middle"
+            dominantBaseline="middle"
+          >
+            Situation
+          </text>
+        )}
+      </svg>
+
+      {/* HAUPTÜBERSCHRIFT SPACER */}
       <div
         style={{
           fontSize: "clamp(20px, 2.5vw, 32px)",
           fontWeight: 600,
-          color: "#002b5c",
+          color: "transparent", // unsichtbar, nur für Spacing
           marginBottom: "clamp(16px, 3vh, 36px)",
         }}
       >
@@ -178,12 +238,12 @@ export default function ZieleFlow({ onDone }: { onDone?: () => void }) {
           </div>
         </div>
 
-        {/* ZIELE */}
+        {/* ZIELE SPACER - unsichtbar, nur für Layout */}
         <div
           style={{
             fontSize: "clamp(24px, 3vw, 32px)",
             fontWeight: 600,
-            color: "#002b5c",
+            color: "transparent",
             paddingTop: "clamp(18px, 3vh, 40px)",
             whiteSpace: "nowrap",
             textAlign: "center",
@@ -250,21 +310,6 @@ export default function ZieleFlow({ onDone }: { onDone?: () => void }) {
           }}
         >
           <PulseCircle size={110} />
-        </div>
-      )}
-
-      {/* SITUATION */}
-      {showSituation && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: "clamp(40px, 8vh, 120px)",
-            fontSize: "clamp(24px, 3vw, 32px)",
-            fontWeight: 600,
-            color: "#002b5c",
-          }}
-        >
-          Situation
         </div>
       )}
     </div>
