@@ -1,74 +1,203 @@
 "use client";
 
+import { useState, useEffect, useLayoutEffect } from "react";
 import TopBar from "@/components/layout/TopBar";
 import AppScreenWrapper from "@/components/AppScreenWrapper";
 import DrawingSVG from "@/components/presentation/DrawingSVG";
 import LaserPointer from "@/components/presentation/LaserPointer";
-import ExportArea from "@/components/export/ExportArea";
-import DrawingOverlay from "@/components/presentation/DrawingOverlay";
 import { Path } from "@/components/presentation/DrawingSVG";
 import FlowController from "./FlowController";
-import AnalyseErklärung from "./AnalyseErklaerung";
-import BeratungErklärung from "./BeratungErklaerung";
-import ServiceErklärung from "./ServiceErklaerung"; // 👈 NEU
+import AnalyseErklaerung from "./AnalyseErklaerung";
+import BeratungErklaerung from "./BeratungErklaerung";
+import ServiceErklaerung from "./ServiceErklaerung";
+import { exportPageContainerAsImage } from "@/components/export/exportPages";
+import { useRouter } from "next/navigation";
 
-import { useState } from "react";
+const TOPBAR_HEIGHT = 76;
 
 export default function ABSPage() {
-  const [mode, setMode] =
-    useState<"normal" | "draw" | "erase" | "laser">("normal");
-const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
+  const [mode, setMode] = useState<"normal" | "draw" | "erase" | "laser">("normal");
+  const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
+  
+  // Phasen
   const [showAnalyse, setShowAnalyse] = useState(false);
   const [showBeratung, setShowBeratung] = useState(false);
-  const [showService, setShowService] = useState(false); // 👈 NEU
+  const [showService, setShowService] = useState(false);
+  
+  // Weiter Button
+  const [showWeiterButton, setShowWeiterButton] = useState(false);
+  
+  // Content Höhe
+  const [contentHeight, setContentHeight] = useState(0);
 
-  const TOPBAR_HEIGHT = 76;
+  const router = useRouter();
+
+  const isDrawingActive = mode === "draw" || mode === "erase";
+
+  /* =========================
+     CONTENT-HÖHE BERECHNEN
+     ========================= */
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const availableHeight = window.innerHeight - TOPBAR_HEIGHT;
+      setContentHeight(availableHeight);
+    };
+
+    measure();
+    window.addEventListener("resize", measure);
+    window.addEventListener("orientationchange", () => setTimeout(measure, 200));
+
+    return () => {
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
+
+  /* =========================
+     SCREENSHOT FUNKTIONEN
+     ========================= */
+
+  const takeScreenshot = async (name: string) => {
+    try {
+      const image = await exportPageContainerAsImage({
+        containerId: "abs-export",
+        backgroundColor: "#ffffff",
+        quality: 0.85,
+      });
+      sessionStorage.setItem(name, image);
+    } catch (error) {
+      console.error(`Screenshot ${name} failed:`, error);
+    }
+  };
+
+  /* =========================
+     PHASE WECHSEL HANDLER
+     ========================= */
+
+  // Phase 1 → Phase 2 (FlowController → Analyse)
+  const handleFlowDone = () => {
+    setShowAnalyse(true);
+  };
+
+  // Phase 2 → Phase 3 (Analyse → Beratung)
+  // Wird beim 2. Klick auf bhalb aufgerufen
+  const handleAnalyseDone = async () => {
+    // Screenshot 1 (mit Zeichnung + Hint)
+    await takeScreenshot("absScreenshot1");
+    
+    // Zeichnung löschen
+    setDrawingPaths([]);
+    
+    // Nächste Phase
+    setShowBeratung(true);
+  };
+
+  // Phase 3 → Phase 4 (Beratung → Service)
+  const handleBeratungDone = async () => {
+    // Screenshot 2 (mit Zeichnung)
+    await takeScreenshot("absScreenshot2");
+    
+    // Zeichnung löschen
+    setDrawingPaths([]);
+    
+    // Nächste Phase
+    setShowService(true);
+  };
+
+  // Phase 4 fertig → Weiter Button zeigen
+  const handleServiceDone = () => {
+    setTimeout(() => setShowWeiterButton(true), 2000);
+  };
+
+  // Weiter Button → Screenshot 3 + Navigation
+  const handleWeiter = async () => {
+    setShowWeiterButton(false);
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Screenshot 3 (mit Zeichnung)
+    await takeScreenshot("absScreenshot3");
+    
+    // Navigation zur nächsten Seite
+    router.push("/pages/werbung"); 
+  };
 
   return (
     <>
       <TopBar mode={mode} setMode={setMode} />
 
       <AppScreenWrapper>
-        <div
-          style={{
-            position: "absolute",
-            top: TOPBAR_HEIGHT,
-            left: 0,
-            right: 0,
-            bottom: 0,
-          }}
-        >
-          <LaserPointer mode={mode} />
+        {contentHeight > 0 && (
+          <div
+            id="abs-export"
+            style={{
+              position: "absolute",
+              top: TOPBAR_HEIGHT,
+              left: 0,
+              width: "100vw",
+              height: contentHeight,
+              overflow: "hidden",
+              background: "#ffffff",
+            }}
+          >
+            {/* Content Layer */}
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                zIndex: 1,
+              }}
+            >
+              <LaserPointer mode={mode} />
 
-          <DrawingOverlay active={mode === "draw" || mode === "erase"}>
-  <DrawingSVG
-    active={mode === "draw" || mode === "erase"}
-    erase={mode === "erase"}
-    paths={drawingPaths}
-    setPaths={setDrawingPaths}
-  />
-</DrawingOverlay>
+              {/* STEP 1 – FlowController */}
+              {!showAnalyse && !showBeratung && !showService && (
+                <FlowController onDone={handleFlowDone} />
+              )}
 
+              {/* STEP 2 – AnalyseErklärung */}
+              {showAnalyse && !showBeratung && !showService && (
+                <AnalyseErklaerung 
+                  containerHeight={contentHeight}
+                  onDone={handleAnalyseDone} 
+                />
+              )}
 
+              {/* STEP 3 – BeratungErklärung */}
+              {showBeratung && !showService && (
+                <BeratungErklaerung 
+                  containerHeight={contentHeight}
+                  onDone={handleBeratungDone} 
+                />
+              )}
 
-          {/* STEP 1 – FlowController */}
-          {!showAnalyse && !showBeratung && !showService && (
-            <FlowController onDone={() => setShowAnalyse(true)} />
-          )}
+              {/* STEP 4 – ServiceErklärung */}
+              {showService && (
+                <ServiceErklaerung 
+                  containerHeight={contentHeight}
+                  onDone={handleServiceDone} 
+                />
+              )}
+            </div>
 
-          {/* STEP 2 – AnalyseErklärung */}
-          {showAnalyse && !showBeratung && !showService && (
-            <AnalyseErklärung onDone={() => setShowBeratung(true)} />
-          )}
+            {/* Drawing Layer */}
+            <DrawingSVG
+              active={isDrawingActive}
+              erase={mode === "erase"}
+              paths={drawingPaths}
+              setPaths={setDrawingPaths}
+            />
+          </div>
+        )}
 
-          {/* STEP 3 – BeratungErklärung */}
-          {showBeratung && !showService && (
-            <BeratungErklärung onDone={() => setShowService(true)} />
-          )}
-
-          {/* STEP 4 – ServiceErklärung */}
-          {showService && <ServiceErklärung />}
-        </div>
+        {/* Weiter Button */}
+        {showWeiterButton && (
+          <button
+            className="werbung-weiter-button"
+            onClick={handleWeiter}
+          >
+            Weiter
+          </button>
+        )}
       </AppScreenWrapper>
     </>
   );

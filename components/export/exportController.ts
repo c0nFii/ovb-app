@@ -19,6 +19,9 @@ export type ExportData = {
 const SCREENSHOT_KEYS = {
   kapitalnarkt: "kapitalmarktScreenshot",
   lebensplan: "lebensplanScreenshot",
+  abs: "absScreenshot1",
+  beratung: "absScreenshot2",
+  service: "absScreenshot3",
   werbung: "werbungScreenshot",
   empfehlung: "empfehlungScreenshot",
 } as const;

@@ -3,57 +3,49 @@
 import { useState, useEffect } from "react";
 
 type ServiceErklaerungProps = {
+  containerHeight: number;
   onDone?: () => void;
 };
 
-export default function ServiceErklaerung({ onDone }: ServiceErklaerungProps) {
+export default function ServiceErklaerung({ containerHeight, onDone }: ServiceErklaerungProps) {
   const [anim, setAnim] = useState(false);
-  const [blinkS, setBlinkS] = useState(false);
 
+  // Bildbereich berechnen
+  const circleSize = Math.min(containerHeight * 0.55, 480);
+
+  // Start animation
   useEffect(() => {
     const t = setTimeout(() => setAnim(true), 150);
     return () => clearTimeout(t);
   }, []);
 
+  // Nach Animation → onDone aufrufen (Weiter Button erscheint)
   useEffect(() => {
     if (anim) {
-      const t = setTimeout(() => setBlinkS(true), 900);
+      const t = setTimeout(() => {
+        onDone?.();
+      }, 1000);
       return () => clearTimeout(t);
     }
-  }, [anim]);
+  }, [anim, onDone]);
 
   return (
     <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
       
-      {/* Titel */}
-      <div
-        style={{
-          position: "absolute",
-          top: "clamp(40px, 8vh, 100px)",
-          left: "50%",
-          transform: "translateX(-50%)",
-          fontSize: "clamp(22px, 3vw, 36px)",
-          fontWeight: 700,
-          color: "#002b5c",
-        }}
-      />
-
-      {/* Kreisbereich */}
+      {/* Kreisbereich - zentriert mit berechneter Größe */}
       <div
         style={{
           position: "absolute",
           left: "50%",
           top: "50%",
           transform: "translate(-50%, -50%)",
-          width: "clamp(280px, 40vw, 480px)",
-          height: "clamp(280px, 40vw, 480px)",
+          width: circleSize,
+          height: circleSize,
         }}
       >
-
         <div style={{ position: "absolute", inset: 0 }}>
 
-          {/* service.png → startet rechts unten (shalb-Position) → fährt nach oben Mitte (großer Kreis) */}
-          {/* beratung.png → fährt nach oben */}
+          {/* service.png → fährt nach oben Mitte (großer Kreis) */}
           <img
             src="/pictures/service.png"
             style={{
@@ -63,13 +55,16 @@ export default function ServiceErklaerung({ onDone }: ServiceErklaerungProps) {
               transform: anim
                 ? "translate(-50%, -50%) scale(2.25)"
                 : "translateY(-50%) scale(1)",
-              width: "clamp(180px, 30vw, 260px)",
+              maxWidth: circleSize * 0.54,
+              maxHeight: circleSize * 0.54,
+              width: "auto",
+              height: "auto",
               transition: "all 0.8s ease",
               zIndex: 5,
             }}
           />
 
-          {/* bhalb.png → startet oben Mitte (beratung-Position) → fährt nach links unten */}
+          {/* beratung.png → fährt nach links unten, verschwindet */}
           <img
             src="/pictures/beratung.png"
             style={{
@@ -79,15 +74,18 @@ export default function ServiceErklaerung({ onDone }: ServiceErklaerungProps) {
               transform: anim
                 ? "translateY(-50%) scale(1)"
                 : "translate(-50%, -50%) scale(2.25)",
-              width: "clamp(180px, 30vw, 260px)",
+              maxWidth: circleSize * 0.54,
+              maxHeight: circleSize * 0.54,
+              width: "auto",
+              height: "auto",
               filter: anim ? "grayscale(100%) brightness(0.8)" : "none",
               opacity: anim ? 0 : 1,
               transition: "all 0.8s ease",
-              zIndex: 99999,
+              zIndex: 4,
             }}
           />
 
-          {/* shalb.png → erscheint erst am Ende */}
+          {/* bhalb.png → erscheint links unten */}
           <img
             src="/pictures/bhalb.png"
             style={{
@@ -95,34 +93,33 @@ export default function ServiceErklaerung({ onDone }: ServiceErklaerungProps) {
               left: "-20%",
               top: "105%",
               transform: "translateY(-50%)",
-              width: "clamp(80px, 12vw, 140px)",
+              maxWidth: circleSize * 0.29,
+              maxHeight: circleSize * 0.29,
+              width: "auto",
+              height: "auto",
               opacity: anim ? 1 : 0,
               transition: "opacity 0.4s ease 0.6s",
-              zIndex: 9999,
+              zIndex: 3,
             }}
           />
 
-          {/* ahalb.png → startet links unten (grauer Halbkreis) → fährt nach rechts unten */}
+          {/* ahalb.png → fährt nach rechts unten */}
           <img
-  src="/pictures/ahalb.png"
-  onClick={() => blinkS && onDone?.()}
-  style={{
-    position: "absolute",
-
-    // 👇 Startposition = Endposition vom oberen S
-    left: anim ? "90%" : "-20%",
-    top: "105%", // bleibt gleich
-
-    transform: "translateY(-50%)",
-    width: "clamp(80px, 12vw, 140px)",
-    filter: anim ? "none" : "grayscale(100%) brightness(0.8)",
-    transition: "all 0.8s ease",
-    zIndex: 3,
-    
-    cursor: blinkS ? "pointer" : "default",
-    pointerEvents: blinkS ? "auto" : "none",
-  }}
-/>
+            src="/pictures/ahalb.png"
+            style={{
+              position: "absolute",
+              left: anim ? "90%" : "-20%",
+              top: "105%",
+              transform: "translateY(-50%)",
+              maxWidth: circleSize * 0.29,
+              maxHeight: circleSize * 0.29,
+              width: "auto",
+              height: "auto",
+              filter: anim ? "none" : "grayscale(100%) brightness(0.8)",
+              transition: "all 0.8s ease",
+              zIndex: 3,
+            }}
+          />
 
           {/* Pfeil S → folgt dem großen Kreis (service.png) */}
           <img
@@ -131,9 +128,10 @@ export default function ServiceErklaerung({ onDone }: ServiceErklaerungProps) {
               position: "absolute",
               left: anim ? "63%" : "60%",
               top: anim ? "38%" : "20%",
-              width: "clamp(100px, 40vw, 240px)",
-              height: "clamp(100px, 40vw, 240px)",
-              objectFit: "contain",
+              maxWidth: circleSize * 0.5,
+              maxHeight: circleSize * 0.5,
+              width: "auto",
+              height: "auto",
               transform: anim
                 ? "rotate(15deg) scale(1.15)"
                 : "rotate(15deg) scale(1)",
@@ -143,34 +141,25 @@ export default function ServiceErklaerung({ onDone }: ServiceErklaerungProps) {
             }}
           />
 
-          {/* Pfeil A → dekorativ/gravierend, wie von dir gesetzt */}
+          {/* Pfeil A → dekorativ */}
           <img
             src="/pictures/pfeils2.png"
             style={{
               position: "absolute",
               right: "60%",
               top: anim ? "40%" : "20%",
-              width: "clamp(100px, 40vw, 240px)",
-              height: "clamp(100px, 40vw, 240px)",
-              objectFit: "contain",
+              maxWidth: circleSize * 0.5,
+              maxHeight: circleSize * 0.5,
+              width: "auto",
+              height: "auto",
               transform: "rotate(270deg)",
               transition: "all 0.8s ease",
               pointerEvents: "none",
               zIndex: 1,
             }}
           />
-
         </div>
       </div>
-
-      {/* Blink Animation (aktuell noch ungenutzt, falls du später klickbares S willst) */}
-      <style jsx>{`
-        @keyframes blinkS {
-          0% { opacity: 1; }
-          50% { opacity: 0.3; }
-          100% { opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 }

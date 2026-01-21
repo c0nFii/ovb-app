@@ -3,12 +3,16 @@
 import { useState, useEffect } from "react";
 
 type BeratungErklaerungProps = {
+  containerHeight: number;
   onDone?: () => void;
 };
 
-export default function BeratungErklaerung({ onDone }: BeratungErklaerungProps) {
+export default function BeratungErklaerung({ containerHeight, onDone }: BeratungErklaerungProps) {
   const [anim, setAnim] = useState(false);
   const [blinkS, setBlinkS] = useState(false);
+
+  // Bildbereich berechnen
+  const circleSize = Math.min(containerHeight * 0.55, 480);
 
   // Start animation
   useEffect(() => {
@@ -19,42 +23,35 @@ export default function BeratungErklaerung({ onDone }: BeratungErklaerungProps) 
   // Start blinking after animation
   useEffect(() => {
     if (anim) {
-      const t = setTimeout(() => setBlinkS(true), 150);
+      const t = setTimeout(() => setBlinkS(true), 800);
       return () => clearTimeout(t);
     }
   }, [anim]);
 
+  // Klick → Screenshot + Weiter
+  const handleClick = () => {
+    if (blinkS) {
+      onDone?.();
+    }
+  };
+
   return (
     <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
       
-      {/* Titel */}
-      <div
-        style={{
-          position: "absolute",
-          top: "clamp(40px, 8vh, 100px)",
-          left: "50%",
-          transform: "translateX(-50%)",
-          fontSize: "clamp(22px, 3vw, 36px)",
-          fontWeight: 700,
-          color: "#002b5c",
-        }}
-      />
-
-      {/* Kreisbereich */}
+      {/* Kreisbereich - zentriert mit berechneter Größe */}
       <div
         style={{
           position: "absolute",
           left: "50%",
           top: "50%",
           transform: "translate(-50%, -50%)",
-          width: "clamp(280px, 40vw, 480px)",
-          height: "clamp(280px, 40vw, 480px)",
+          width: circleSize,
+          height: circleSize,
         }}
       >
-
         <div style={{ position: "absolute", inset: 0 }}>
 
-          {/* analyse.png → fährt runter, wird kleiner, wird grau */}
+          {/* analyse.png → fährt runter, wird kleiner, verschwindet */}
           <img
             src="/pictures/analyse.png"
             style={{
@@ -64,7 +61,10 @@ export default function BeratungErklaerung({ onDone }: BeratungErklaerungProps) 
               transform: anim
                 ? "translateY(-50%) scale(1)"
                 : "translate(-50%, -50%) scale(2.25)",
-              width: "clamp(180px, 30vw, 260px)",
+              maxWidth: circleSize * 0.54,
+              maxHeight: circleSize * 0.54,
+              width: "auto",
+              height: "auto",
               filter: anim ? "grayscale(100%) brightness(0.8)" : "none",
               opacity: anim ? 0 : 1,
               transition: "all 0.8s ease",
@@ -72,15 +72,18 @@ export default function BeratungErklaerung({ onDone }: BeratungErklaerungProps) 
             }}
           />
 
-          {/* shalb.png → erscheint erst am Ende */}
+          {/* ahalb.png → erscheint erst am Ende (grau) */}
           <img
-            src="/pictures/shalb.png"
+            src="/pictures/ahalb.png"
             style={{
               position: "absolute",
               left: "-20%",
               top: "105%",
               transform: "translateY(-50%)",
-              width: "clamp(80px, 12vw, 140px)",
+              maxWidth: circleSize * 0.29,
+              maxHeight: circleSize * 0.29,
+              width: "auto",
+              height: "auto",
               filter: "grayscale(100%) brightness(0.8)",
               opacity: anim ? 1 : 0,
               transition: "opacity 0.4s ease 0.6s",
@@ -98,49 +101,48 @@ export default function BeratungErklaerung({ onDone }: BeratungErklaerungProps) 
               transform: anim
                 ? "translate(-50%, -50%) scale(2.25)"
                 : "translateY(-50%) scale(1)",
-              width: "clamp(180px, 30vw, 260px)",
+              maxWidth: circleSize * 0.54,
+              maxHeight: circleSize * 0.54,
+              width: "auto",
+              height: "auto",
               transition: "all 0.8s ease",
               zIndex: 5,
             }}
           />
 
-         {/* s.png → fährt nach rechts unten */}
-<img
-  src="/pictures/shalb.png"
-  onClick={() => blinkS && onDone?.()}
-  style={{
-    position: "absolute",
+          {/* shalb.png → fährt nach rechts unten, blinkt */}
+          <img
+            src="/pictures/shalb.png"
+            onClick={handleClick}
+            style={{
+              position: "absolute",
+              left: anim ? "90%" : "-20%",
+              top: "105%",
+              transform: "translateY(-50%)",
+              maxWidth: circleSize * 0.29,
+              maxHeight: circleSize * 0.29,
+              width: "auto",
+              height: "auto",
+              filter: anim ? "none" : "grayscale(100%) brightness(0.8)",
+              transition: "all 0.8s ease",
+              zIndex: 3,
+              animation: blinkS ? "blinkS 1.1s ease-in-out infinite" : "none",
+              cursor: blinkS ? "pointer" : "default",
+              pointerEvents: blinkS ? "auto" : "none",
+            }}
+          />
 
-    // 👇 Startposition = Endposition vom oberen S
-    left: anim ? "90%" : "-20%",
-    top: "105%", // bleibt gleich
-
-    transform: "translateY(-50%)",
-    width: "clamp(80px, 12vw, 140px)",
-    filter: anim ? "none" : "grayscale(100%) brightness(0.8)",
-    transition: "all 0.8s ease",
-    zIndex: 3,
-    animation: blinkS ? "blinkS 1.1s ease-in-out infinite" : "none",
-    cursor: blinkS ? "pointer" : "default",
-    pointerEvents: blinkS ? "auto" : "none",
-  }}
-/>
-
-
-          {/* --------------------------------------------- */}
-          {/* PFEILE — sauber rotiert wie in AnalyseErklärung */}
-          {/* --------------------------------------------- */}
-
-          {/* Pfeil A → folgt dem großen Kreis (beratung.png) */}
+          {/* Pfeil B → folgt dem großen Kreis (beratung.png) */}
           <img
             src="/pictures/pfeils2.png"
             style={{
               position: "absolute",
               left: anim ? "63%" : "60%",
               top: anim ? "38%" : "20%",
-              width: "clamp(100px, 40vw, 240px)",
-              height: "clamp(100px, 40vw, 240px)",
-              objectFit: "contain",
+              maxWidth: circleSize * 0.5,
+              maxHeight: circleSize * 0.5,
+              width: "auto",
+              height: "auto",
               transform: anim
                 ? "rotate(15deg) scale(1.15)"
                 : "rotate(15deg) scale(1)",
@@ -150,18 +152,17 @@ export default function BeratungErklaerung({ onDone }: BeratungErklaerungProps) 
             }}
           />
 
-          
-
-          {/* Pfeil S → folgt dem linken Kreis (analyse → shalb) */}
+          {/* Pfeil S → folgt dem linken Kreis */}
           <img
             src="/pictures/pfeils.png"
             style={{
               position: "absolute",
-              right: anim ? "60%" : "60%",
+              right: "60%",
               top: anim ? "40%" : "20%",
-              width: "clamp(100px, 40vw, 240px)",
-              height: "clamp(100px, 40vw, 240px)",
-              objectFit: "contain",
+              maxWidth: circleSize * 0.5,
+              maxHeight: circleSize * 0.5,
+              width: "auto",
+              height: "auto",
               transform: "rotate(85deg)",
               filter: "grayscale(100%) brightness(0.8)",
               transition: "all 0.8s ease",
@@ -169,11 +170,9 @@ export default function BeratungErklaerung({ onDone }: BeratungErklaerungProps) 
               zIndex: 1,
             }}
           />
-
         </div>
       </div>
 
-      {/* Blink Animation */}
       <style jsx>{`
         @keyframes blinkS {
           0% { opacity: 1; }

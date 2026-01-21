@@ -64,7 +64,7 @@ export default function FlowController({ onDone }: { onDone?: () => void }) {
         <div
           style={{
             position: "absolute",
-            top: "clamp(40px, 8vh, 100px)",
+            top: "2%",
             left: "50%",
             transform: "translateX(-50%)",
             fontSize: "clamp(22px, 3vw, 36px)",
