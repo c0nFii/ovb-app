@@ -16,7 +16,7 @@ import { useRouter } from "next/navigation";
 const TOPBAR_HEIGHT = 76;
 
 export default function ABSPage() {
-  const [mode, setMode] = useState<"normal" | "draw" | "erase" | "laser">("normal");
+  const [mode, setMode] = useState<"normal" | "draw" | "erase" | "laser">("draw");
   const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
   
   // Phasen
@@ -32,7 +32,7 @@ export default function ABSPage() {
 
   const router = useRouter();
 
-  const isDrawingActive = mode === "draw" || mode === "erase";
+  const isDrawingActive = mode !== "laser"; // Zeichnen aktiv außer im Laser-Modus
 
   /* =========================
      CONTENT-HÖHE BERECHNEN

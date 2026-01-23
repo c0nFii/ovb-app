@@ -25,6 +25,7 @@ export default function PulseCircle({
         borderRadius: "50%",
         cursor: onClick ? "pointer" : "default",
         overflow: "visible",
+        zIndex: 9999, // Über DrawingSVG (100)
         ...style,
       }}
     >

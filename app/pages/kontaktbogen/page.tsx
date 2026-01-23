@@ -43,7 +43,7 @@ export type Path = {
 
 export default function KontaktbogenPage() {
   const [mode, setMode] =
-    useState<"normal" | "draw" | "erase" | "laser">("normal");
+    useState<"normal" | "draw" | "erase" | "laser">("draw");
 
   const [page, setPage] = useState<1 | 2>(1);
   const [isExporting, setIsExporting] = useState(false);
@@ -232,9 +232,9 @@ export default function KontaktbogenPage() {
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
-          <DrawingOverlay active={mode === "draw" || mode === "erase"}>
+          <DrawingOverlay active={mode !== "laser"}>
             <DrawingSVG
-              active={mode === "draw" || mode === "erase"}
+              active={mode !== "laser"}
               erase={mode === "erase"}
               paths={drawingPaths}
               setPaths={setDrawingPaths}

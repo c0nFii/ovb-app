@@ -42,7 +42,7 @@ export default function DrawingSVG({
   const containerRef = useRef<HTMLDivElement>(null);
   const lastPoint = useRef<Point | null>(null);
   const [currentPath, setCurrentPath] = useState<Path | null>(null);
-  
+
   // Container-Größe für viewBox
   const [size, setSize] = useState({ width: 1920, height: 1080 });
 
@@ -76,7 +76,7 @@ export default function DrawingSVG({
      KOORDINATEN
      ========================= */
 
-  const getPoint = useCallback((e: React.PointerEvent): Point => {
+  const getPoint = useCallback((e: React.PointerEvent | PointerEvent): Point => {
     const svg = svgRef.current;
     if (!svg) return { x: 0, y: 0 };
 
@@ -88,10 +88,10 @@ export default function DrawingSVG({
     if (!screenCTM) return { x: 0, y: 0 };
 
     const svgPoint = pt.matrixTransform(screenCTM.inverse());
-    
-    return { 
-      x: Math.round(svgPoint.x * 100) / 100, 
-      y: Math.round(svgPoint.y * 100) / 100 
+
+    return {
+      x: Math.round(svgPoint.x * 100) / 100,
+      y: Math.round(svgPoint.y * 100) / 100
     };
   }, []);
 
@@ -106,11 +106,58 @@ export default function DrawingSVG({
   }, []);
 
   /* =========================
-     POINTER EVENTS - NUR PEN
+     MAUS/TOUCH CLICK WEITERLEITUNG
+     ========================= */
+
+  const forwardEventToElementBelow = useCallback((e: React.PointerEvent) => {
+    const svg = svgRef.current;
+    if (!svg) return;
+
+    // SVG kurz deaktivieren
+    svg.style.pointerEvents = "none";
+
+    // Element darunter finden
+    const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
+
+    if (elementBelow && elementBelow !== svg) {
+      // Für Input-Felder: Fokus setzen und SVG länger deaktiviert lassen
+      if (elementBelow instanceof HTMLInputElement ||
+          elementBelow instanceof HTMLTextAreaElement ||
+          elementBelow instanceof HTMLSelectElement) {
+        elementBelow.focus();
+        // SVG für 500ms deaktiviert lassen, damit Tastatur sich stabilisieren kann
+        setTimeout(() => {
+          svg.style.pointerEvents = "auto";
+        }, 500);
+        return;
+      }
+
+      // Für andere Elemente: Click Event weiterleiten
+      elementBelow.dispatchEvent(new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+        clientX: e.clientX,
+        clientY: e.clientY,
+      }));
+    }
+
+    // SVG sofort wieder aktivieren (außer bei Inputs)
+    svg.style.pointerEvents = "auto";
+  }, []);
+
+  /* =========================
+     POINTER EVENTS - NUR PEN auf SVG
      ========================= */
 
   const handlePointerDown = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
-    if (!active || e.pointerType !== "pen") return;
+    // Nicht-Stift Events weiterleiten
+    if (e.pointerType !== "pen") {
+      forwardEventToElementBelow(e);
+      return;
+    }
+
+    if (!active) return;
 
     e.preventDefault();
     e.stopPropagation();
@@ -124,16 +171,18 @@ export default function DrawingSVG({
     } else {
       setPaths((prev) => prev.filter((path) => !isPointNearPath(p, path)));
     }
-  }, [active, erase, color, width, getPoint, isPointNearPath, setPaths]);
+  }, [active, erase, color, width, getPoint, isPointNearPath, setPaths, forwardEventToElementBelow]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
-    if (!active || e.pointerType !== "pen" || !lastPoint.current) return;
+    // Nur Stift-Events verarbeiten
+    if (e.pointerType !== "pen") return;
+    if (!active || !lastPoint.current) return;
 
     e.preventDefault();
     e.stopPropagation();
 
     const p = getPoint(e);
-    
+
     if (distance(p, lastPoint.current) < 1) return;
 
     lastPoint.current = p;
@@ -148,7 +197,12 @@ export default function DrawingSVG({
   }, [active, erase, getPoint, isPointNearPath, setPaths]);
 
   const handlePointerEnd = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
-    if (!active || e.pointerType !== "pen") return;
+    // Nicht-Stift Events ignorieren (wurden bei PointerDown schon weitergeleitet)
+    if (e.pointerType !== "pen") {
+      return;
+    }
+
+    if (!active) return;
 
     e.preventDefault();
     e.stopPropagation();
@@ -175,28 +229,28 @@ export default function DrawingSVG({
       style={{
         position: "absolute",
         inset: 0,
-        zIndex: 100, // Unter TopBar (9999), über Content
-        pointerEvents: active ? "auto" : "none",
+        zIndex: 100,
+        pointerEvents: "none",
       }}
     >
-      <svg
-        ref={svgRef}
-        viewBox={`0 0 ${size.width} ${size.height}`}
-        preserveAspectRatio="none"
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          touchAction: "none",
-        }}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerEnd}
-        onPointerCancel={handlePointerEnd}
-        onPointerLeave={handlePointerEnd}
-      >
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${size.width} ${size.height}`}
+          preserveAspectRatio="none"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            touchAction: "none",
+            pointerEvents: "auto", // Empfängt alle Events, leitet Nicht-Stift weiter
+          }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerEnd}
+          onPointerCancel={handlePointerEnd}
+        >
         {paths.map((p, i) => (
           <path
             key={i}

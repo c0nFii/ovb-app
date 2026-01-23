@@ -15,7 +15,7 @@ const TOPBAR_HEIGHT = 66; // Feste TopBar Höhe (wie EmpfehlungPage)
 
 export default function FinanziellerLebensplanPage() {
   const [mode, setMode] =
-    useState<"normal" | "draw" | "erase" | "laser">("normal");
+    useState<"normal" | "draw" | "erase" | "laser">("draw");
   const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
   const [flowCompleted, setFlowCompleted] = useState(false);
   const [showWeiterButton, setShowWeiterButton] = useState(false);
@@ -84,7 +84,7 @@ export default function FinanziellerLebensplanPage() {
     router.push("/pages/abs");
   };
 
-  const isDrawingActive = mode === "draw" || mode === "erase";
+  const isDrawingActive = mode !== "laser"; // Zeichnen aktiv außer im Laser-Modus
 
   return (
     <>

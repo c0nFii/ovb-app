@@ -18,7 +18,7 @@ const TOPBAR_HEIGHT = 66; // Feste TopBar Höhe (wie EmpfehlungPage)
 export default function WerbungPage() {
   const [started, setStarted] = useState(false);
   const [mode, setMode] =
-    useState<"normal" | "draw" | "erase" | "laser">("normal");
+    useState<"normal" | "draw" | "erase" | "laser">("draw");
   const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
   const [showWerbung, setShowWerbung] = useState(false);
 
@@ -92,7 +92,7 @@ export default function WerbungPage() {
     router.push("/pages/empfehlung");
   };
 
-  const isDrawingActive = mode === "draw" || mode === "erase";
+  const isDrawingActive = mode !== "laser"; // Zeichnen aktiv außer im Laser-Modus
 
   /* =========================
      RENDER

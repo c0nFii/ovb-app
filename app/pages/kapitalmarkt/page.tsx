@@ -18,7 +18,7 @@ export default function KapitalmarktPage() {
   const [started, setStarted] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
   const [mode, setMode] =
-    useState<"normal" | "draw" | "erase" | "laser">("normal");
+    useState<"normal" | "draw" | "erase" | "laser">("draw");
   const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
   const [showNextTrigger, setShowNextTrigger] = useState(true);
 
@@ -47,7 +47,7 @@ export default function KapitalmarktPage() {
   ];
 
   const isLastImage = imageIndex === images.length - 1;
-  const isDrawingActive = mode === "draw" || mode === "erase";
+  const isDrawingActive = mode !== "laser"; // Zeichnen aktiv außer im Laser-Modus
 
   // Bildbereich: 85% der Container-Höhe, max 900px
   const imageHeight = Math.min(contentHeight * 0.85, 900);
@@ -181,7 +181,7 @@ export default function KapitalmarktPage() {
                     top: "50%",
                     left: "50%",
                     transform: "translate(-50%, -50%)",
-                    zIndex: 100,
+                    zIndex: 9999,
                   }}
                 />
               )}

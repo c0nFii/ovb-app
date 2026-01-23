@@ -14,7 +14,7 @@ const OVB_BLUE = "#013F72";
 export default function ChancenblattPage() {
   const [started, setStarted] = useState(false);
   const [mode, setMode] =
-    useState<"normal" | "draw" | "erase" | "laser">("normal");
+    useState<"normal" | "draw" | "erase" | "laser">("draw");
 const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
   return (
     <>
@@ -23,9 +23,9 @@ const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
       <AppScreenWrapper>
 <LaserPointer mode={mode} />
 
-        <DrawingOverlay active={mode === "draw" || mode === "erase"}>
+        <DrawingOverlay active={mode !== "laser"}>
   <DrawingSVG
-    active={mode === "draw" || mode === "erase"}
+    active={mode !== "laser"}
     erase={mode === "erase"}
     paths={drawingPaths}
     setPaths={setDrawingPaths}

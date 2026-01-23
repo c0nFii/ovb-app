@@ -121,16 +121,6 @@ export default function TopBar({
               }}
             />
 
-            <Tool
-              icon="/icons/normalmodus.png"
-              active={mode === "normal"}
-              onClick={() => {
-                setMode("normal");
-                setShowPenOptions(false);
-                setShowNotes(false);
-              }}
-            />
-
             {onSave && <Tool icon="/icons/save.png" onClick={onSave} />}
           </div>
 

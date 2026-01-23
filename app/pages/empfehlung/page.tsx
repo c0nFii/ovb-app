@@ -15,7 +15,7 @@ const TOPBAR_HEIGHT = 66; // Feste TopBar Höhe (50px Icon + 8px padding oben/un
 
 export default function EmpfehlungPage() {
   const [started, setStarted] = useState(false);
-  const [mode, setMode] = useState<"normal" | "draw" | "erase" | "laser">("normal");
+  const [mode, setMode] = useState<"normal" | "draw" | "erase" | "laser">("draw");
   const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
   const [flowCompleted, setFlowCompleted] = useState(false);
   const [showWeiterButton, setShowWeiterButton] = useState(false);
@@ -74,7 +74,7 @@ export default function EmpfehlungPage() {
     router.push("/pages/kontaktbogen");
   };
 
-  const isDrawingActive = mode === "draw" || mode === "erase";
+  const isDrawingActive = mode !== "laser"; // Zeichnen aktiv außer im Laser-Modus
 
   return (
     <>
@@ -114,7 +114,7 @@ export default function EmpfehlungPage() {
                     top: "50%",
                     left: "50%",
                     transform: "translate(-50%, -50%)",
-                    zIndex: 50,
+                    zIndex: 9999,
                     pointerEvents: "auto",
                   }}
                 />
