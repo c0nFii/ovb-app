@@ -232,9 +232,9 @@ export default function KontaktbogenPage() {
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
-          <DrawingOverlay active={mode !== "laser"}>
+          <DrawingOverlay active={false}>
             <DrawingSVG
-              active={mode !== "laser"}
+              active={false}
               erase={mode === "erase"}
               paths={drawingPaths}
               setPaths={setDrawingPaths}

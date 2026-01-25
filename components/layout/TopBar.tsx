@@ -37,6 +37,7 @@ export default function TopBar({
   };
 
   const nextPage = nextPageMap[pathname] ?? null;
+  const isKontaktbogen = pathname === "/pages/kontaktbogen";
 
   return (
     <>
@@ -86,30 +87,35 @@ export default function TopBar({
 
           {/* MITTE — Tools */}
           <div style={{ display: "flex", gap: 16, justifyContent: "center" }}>
-            {/* ✏️ Stift */}
-            <Tool
-              icon="/icons/stift.png"
-              active={mode === "draw"}
-              onClick={() => {
-                setShowNotes(false);
-                if (mode === "draw") {
-                  setShowPenOptions((v) => !v);
-                } else {
-                  setMode("draw");
-                  setShowPenOptions(false);
-                }
-              }}
-            />
+            {/* ✏️ Stift - Nicht im Kontaktbogen */}
+            {!isKontaktbogen && (
+              <Tool
+                icon="/icons/stift.png"
+                active={mode === "draw"}
+                onClick={() => {
+                  setShowNotes(false);
+                  if (mode === "draw") {
+                    setShowPenOptions((v) => !v);
+                  } else {
+                    setMode("draw");
+                    setShowPenOptions(false);
+                  }
+                }}
+              />
+            )}
 
-            <Tool
-              icon="/icons/radierer.png"
-              active={mode === "erase"}
-              onClick={() => {
-                setMode("erase");
-                setShowPenOptions(false);
-                setShowNotes(false);
-              }}
-            />
+            {/* Radierer - Nicht im Kontaktbogen */}
+            {!isKontaktbogen && (
+              <Tool
+                icon="/icons/radierer.png"
+                active={mode === "erase"}
+                onClick={() => {
+                  setMode("erase");
+                  setShowPenOptions(false);
+                  setShowNotes(false);
+                }}
+              />
+            )}
 
             <Tool
               icon="/icons/laserpointer.png"

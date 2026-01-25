@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">OVB Firmenvorstellung</string>
+    <string name="title_activity_main">OVB Firmenvorstellung</string>
+    <string name="package_name">com.ovb.firmenvorstellung</string>
+    <string name="custom_url_scheme">com.ovb.firmenvorstellung</string>
+</resources>

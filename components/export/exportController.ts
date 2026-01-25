@@ -1,5 +1,8 @@
 import { jsPDF } from "jspdf";
 import { exportKontaktbogenTextPDF, Person } from "./exportText";
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+import { Capacitor } from '@capacitor/core';
 
 /* =========================
    TYPES
@@ -39,6 +42,51 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
+/**
+ * Prüft ob wir auf einer nativen Plattform (iOS/Android) laufen
+ */
+function isNativePlatform(): boolean {
+  return Capacitor.isNativePlatform();
+}
+
+/**
+ * Speichert PDF und teilt es (Capacitor) oder lädt es herunter (Browser)
+ */
+async function saveOrDownloadPDF(doc: jsPDF, fileName: string): Promise<void> {
+  if (!isNativePlatform()) {
+    // Browser: normaler Download
+    doc.save(fileName);
+    return;
+  }
+
+  try {
+    // Native: PDF als base64 extrahieren
+    const pdfBase64 = doc.output('dataurlstring');
+    const base64 = pdfBase64.split(',')[1]; // "data:application/pdf;base64,..." -> nur base64 Teil
+
+    // PDF ins Filesystem schreiben
+    const result = await Filesystem.writeFile({
+      path: fileName,
+      data: base64,
+      directory: Directory.Cache,
+    });
+
+    console.log('PDF saved to:', result.uri);
+
+    // PDF teilen
+    await Share.share({
+      title: 'OVB Firmenvorstellung',
+      text: 'Ihre Firmenvorstellung',
+      url: result.uri,
+      dialogTitle: 'PDF teilen',
+    });
+
+  } catch (error) {
+    console.error('Failed to save/share PDF:', error);
+    throw new Error('PDF konnte nicht gespeichert oder geteilt werden');
+  }
+}
+
 /* =========================
    CONTROLLER
    ========================= */
@@ -60,10 +108,12 @@ export async function exportKontaktbogenToPDF(
     }))
     .filter(s => s.image) as { name: string; image: string }[];
 
+  const fileName = `Firmenvorstellung-${geberName}.pdf`;
+
   if (screenshots.length === 0) {
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     await exportKontaktbogenTextPDF({ geberName, personen, notes, doc });
-    doc.save(`Firmenvorstellung-${geberName}.pdf`);
+    await saveOrDownloadPDF(doc, fileName);
     return;
   }
 
@@ -103,7 +153,7 @@ export async function exportKontaktbogenToPDF(
   doc.addPage([210, 297], "portrait");
   await exportKontaktbogenTextPDF({ geberName, personen, notes, doc });
 
-  doc.save(`Firmenvorstellung-${geberName}.pdf`);
+  await saveOrDownloadPDF(doc, fileName);
 
   if (onCleanupDialog) {
     setTimeout(() => onCleanupDialog(true), 100);

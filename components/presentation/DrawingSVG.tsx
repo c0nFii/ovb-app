@@ -11,9 +11,11 @@ export type Path = {
   d: string;
   color: string;
   width: number;
+  // NEU: Pressure-Points für variable Strichdicke
+  pressurePoints?: Array<{ x: number; y: number; pressure: number }>;
 };
 
-type Point = { x: number; y: number };
+type Point = { x: number; y: number; pressure?: number };
 
 /* =========================
    HELPERS
@@ -21,6 +23,19 @@ type Point = { x: number; y: number };
 
 function distance(a: Point, b: Point) {
   return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+// NEU: Berechne Strichdicke basierend auf Druck
+function getPressureWidth(basePressure: number, baseWidth: number): number {
+  // Normalisiere Druck (manche Stifte geben 0.5 als "normal" zurück)
+  const normalizedPressure = Math.max(0.1, basePressure);
+  
+  // Multipliziere Basisbreite mit Druck (min: 30%, max: 150%)
+  const minFactor = 0.3;
+  const maxFactor = 1.5;
+  const factor = minFactor + (normalizedPressure * (maxFactor - minFactor));
+  
+  return Math.round(baseWidth * factor * 10) / 10;
 }
 
 /* =========================
@@ -32,16 +47,21 @@ export default function DrawingSVG({
   erase,
   paths,
   setPaths,
+  allowScroll = false,
 }: {
   active: boolean;
   erase: boolean;
   paths: Path[];
   setPaths: React.Dispatch<React.SetStateAction<Path[]>>;
+  allowScroll?: boolean; // Für Kontaktbogen: Erlaubt vertikales Scrollen
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const lastPoint = useRef<Point | null>(null);
   const [currentPath, setCurrentPath] = useState<Path | null>(null);
+  
+  // NEU: Aktuelle Pressure-Points speichern
+  const currentPressurePoints = useRef<Array<{ x: number; y: number; pressure: number }>>([]);
 
   // Container-Größe für viewBox
   const [size, setSize] = useState({ width: 1920, height: 1080 });
@@ -78,20 +98,21 @@ export default function DrawingSVG({
 
   const getPoint = useCallback((e: React.PointerEvent | PointerEvent): Point => {
     const svg = svgRef.current;
-    if (!svg) return { x: 0, y: 0 };
+    if (!svg) return { x: 0, y: 0, pressure: 0.5 };
 
     const pt = svg.createSVGPoint();
     pt.x = e.clientX;
     pt.y = e.clientY;
 
     const screenCTM = svg.getScreenCTM();
-    if (!screenCTM) return { x: 0, y: 0 };
+    if (!screenCTM) return { x: 0, y: 0, pressure: 0.5 };
 
     const svgPoint = pt.matrixTransform(screenCTM.inverse());
 
     return {
       x: Math.round(svgPoint.x * 100) / 100,
-      y: Math.round(svgPoint.y * 100) / 100
+      y: Math.round(svgPoint.y * 100) / 100,
+      pressure: e.pressure || 0.5 // NEU: Druck auslesen (Fallback 0.5)
     };
   }, []);
 
@@ -106,33 +127,28 @@ export default function DrawingSVG({
   }, []);
 
   /* =========================
-     MAUS/TOUCH CLICK WEITERLEITUNG
+     CLICK WEITERLEITUNG
      ========================= */
 
-  const forwardEventToElementBelow = useCallback((e: React.PointerEvent) => {
+  const forwardClick = useCallback((e: React.PointerEvent) => {
     const svg = svgRef.current;
     if (!svg) return;
 
     // SVG kurz deaktivieren
     svg.style.pointerEvents = "none";
-
-    // Element darunter finden
     const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
+    svg.style.pointerEvents = "auto";
 
     if (elementBelow && elementBelow !== svg) {
-      // Für Input-Felder: Fokus setzen und SVG länger deaktiviert lassen
+      // Input-Felder fokussieren
       if (elementBelow instanceof HTMLInputElement ||
           elementBelow instanceof HTMLTextAreaElement ||
           elementBelow instanceof HTMLSelectElement) {
         elementBelow.focus();
-        // SVG für 500ms deaktiviert lassen, damit Tastatur sich stabilisieren kann
-        setTimeout(() => {
-          svg.style.pointerEvents = "auto";
-        }, 500);
         return;
       }
 
-      // Für andere Elemente: Click Event weiterleiten
+      // Click simulieren
       elementBelow.dispatchEvent(new MouseEvent("click", {
         bubbles: true,
         cancelable: true,
@@ -141,9 +157,6 @@ export default function DrawingSVG({
         clientY: e.clientY,
       }));
     }
-
-    // SVG sofort wieder aktivieren (außer bei Inputs)
-    svg.style.pointerEvents = "auto";
   }, []);
 
   /* =========================
@@ -151,9 +164,9 @@ export default function DrawingSVG({
      ========================= */
 
   const handlePointerDown = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
-    // Nicht-Stift Events weiterleiten
+    // Nicht-Stift: Weiterleiten
     if (e.pointerType !== "pen") {
-      forwardEventToElementBelow(e);
+      forwardClick(e);
       return;
     }
 
@@ -166,12 +179,20 @@ export default function DrawingSVG({
     const p = getPoint(e);
     lastPoint.current = p;
 
+    // NEU: Pressure-Points initialisieren
+    currentPressurePoints.current = [{ x: p.x, y: p.y, pressure: p.pressure || 0.5 }];
+
     if (!erase) {
-      setCurrentPath({ d: `M ${p.x} ${p.y}`, color, width });
+      setCurrentPath({
+        d: `M ${p.x} ${p.y}`,
+        color,
+        width,
+        pressurePoints: currentPressurePoints.current
+      });
     } else {
       setPaths((prev) => prev.filter((path) => !isPointNearPath(p, path)));
     }
-  }, [active, erase, color, width, getPoint, isPointNearPath, setPaths, forwardEventToElementBelow]);
+  }, [active, erase, color, width, getPoint, isPointNearPath, setPaths, forwardClick]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
     // Nur Stift-Events verarbeiten
@@ -186,10 +207,19 @@ export default function DrawingSVG({
     if (distance(p, lastPoint.current) < 1) return;
 
     lastPoint.current = p;
+    
+    // NEU: Pressure-Point hinzufügen
+    if (p.pressure !== undefined) {
+      currentPressurePoints.current.push({ x: p.x, y: p.y, pressure: p.pressure });
+    }
 
     if (!erase) {
       setCurrentPath((prev) =>
-        prev ? { ...prev, d: `${prev.d} L ${p.x} ${p.y}` } : prev
+        prev ? { 
+          ...prev, 
+          d: `${prev.d} L ${p.x} ${p.y}`,
+          pressurePoints: currentPressurePoints.current
+        } : prev
       );
     } else {
       setPaths((prev) => prev.filter((path) => !isPointNearPath(p, path)));
@@ -217,11 +247,58 @@ export default function DrawingSVG({
 
     lastPoint.current = null;
     setCurrentPath(null);
+    currentPressurePoints.current = [];
   }, [active, erase, currentPath, setPaths]);
 
   /* =========================
-     RENDER
+     RENDER mit PRESSURE
      ========================= */
+
+  // NEU: Rendere Pfad mit variabler Strichdicke basierend auf Druck
+  const renderPressurePath = (path: Path, key: number | string) => {
+    // Wenn keine Pressure-Daten vorhanden, normale Linie rendern
+    if (!path.pressurePoints || path.pressurePoints.length < 2) {
+      return (
+        <path
+          key={key}
+          d={path.d}
+          fill="none"
+          stroke={path.color}
+          strokeWidth={path.width}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      );
+    }
+
+    // Mit Pressure: Rendere mehrere Segmente mit unterschiedlicher Dicke
+    const points = path.pressurePoints;
+    return (
+      <g key={key}>
+        {points.map((point, i) => {
+          if (i === 0) return null;
+          const prevPoint = points[i - 1];
+          const avgPressure = (point.pressure + prevPoint.pressure) / 2;
+          const segmentWidth = getPressureWidth(avgPressure, path.width);
+          
+          return (
+            <line
+              key={i}
+              x1={prevPoint.x}
+              y1={prevPoint.y}
+              x2={point.x}
+              y2={point.y}
+              stroke={path.color}
+              strokeWidth={segmentWidth}
+              strokeLinecap="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          );
+        })}
+      </g>
+    );
+  };
 
   return (
     <div
@@ -243,38 +320,21 @@ export default function DrawingSVG({
             left: 0,
             width: "100%",
             height: "100%",
-            touchAction: "none",
-            pointerEvents: "auto", // Empfängt alle Events, leitet Nicht-Stift weiter
+            pointerEvents: active ? "auto" : "none",
+            touchAction: active
+              ? (allowScroll ? "pan-y" : "none")  // pan-y erlaubt vertikales Scrollen
+              : "auto",
           }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerEnd}
           onPointerCancel={handlePointerEnd}
         >
-        {paths.map((p, i) => (
-          <path
-            key={i}
-            d={p.d}
-            fill="none"
-            stroke={p.color}
-            strokeWidth={p.width}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          />
-        ))}
+        {/* NEU: Paths mit Pressure rendern */}
+        {paths.map((p, i) => renderPressurePath(p, i))}
 
-        {currentPath && !erase && (
-          <path
-            d={currentPath.d}
-            fill="none"
-            stroke={currentPath.color}
-            strokeWidth={currentPath.width}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          />
-        )}
+        {/* NEU: Current Path mit Pressure */}
+        {currentPath && !erase && renderPressurePath(currentPath, 'current')}
       </svg>
     </div>
   );
