@@ -18,6 +18,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "OVB App",
   description: "created by Michael Hamader",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "OVB App",
+  },
 };
 
 // Viewport als separate Export (Next.js 14+ Best Practice)

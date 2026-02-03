@@ -3,10 +3,9 @@
 import { useEffect, useState, useLayoutEffect } from "react";
 import TopBar from "@/components/layout/TopBar";
 import AppScreenWrapper from "@/components/AppScreenWrapper";
-import DrawingSVG from "@/components/presentation/DrawingSVG";
+import NativeDrawingWrapper, { type Path } from "@/components/presentation/NativeDrawingWrapper";
 import LaserPointer from "@/components/presentation/LaserPointer";
 import FlowController from "./FlowController";
-import { Path } from "@/components/presentation/DrawingSVG";
 import { useRouter } from "next/navigation";
 import { exportPageContainerAsImage } from "@/components/export/exportPages";
 import "@/components/export/export.css";
@@ -121,7 +120,7 @@ export default function FinanziellerLebensplanPage() {
             </div>
 
             {/* Drawing Layer - z-index unter TopBar */}
-            <DrawingSVG
+            <NativeDrawingWrapper
               active={isDrawingActive}
               erase={mode === "erase"}
               paths={drawingPaths}

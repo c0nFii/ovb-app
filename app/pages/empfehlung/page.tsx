@@ -5,9 +5,8 @@ import AppScreenWrapper from "@/components/AppScreenWrapper";
 import TopBar from "@/components/layout/TopBar";
 import PulseCircle from "@/components/presentation/PulseCircle";
 import EmpfehlungFlow from "./EmpfehlungFlow";
-import DrawingSVG from "@/components/presentation/DrawingSVG";
+import NativeDrawingWrapper, { type Path } from "@/components/presentation/NativeDrawingWrapper";
 import LaserPointer from "@/components/presentation/LaserPointer";
-import { Path } from "@/components/presentation/DrawingSVG";
 import { exportPageContainerAsImage } from "@/components/export/exportPages";
 import { useRouter } from "next/navigation";
 
@@ -129,7 +128,7 @@ export default function EmpfehlungPage() {
             </div>
 
             {/* Drawing Layer - z-index unter TopBar */}
-            <DrawingSVG
+            <NativeDrawingWrapper
               active={isDrawingActive}
               erase={mode === "erase"}
               paths={drawingPaths}

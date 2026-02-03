@@ -303,17 +303,21 @@ export default function DrawingSVG({
   return (
     <div
       ref={containerRef}
+      data-apple-pencil-scribble-enabled="false"
       style={{
         position: "absolute",
         inset: 0,
         zIndex: 100,
         pointerEvents: "none",
       }}
+      onContextMenu={(e) => e.preventDefault()}
     >
         <svg
           ref={svgRef}
           viewBox={`0 0 ${size.width} ${size.height}`}
           preserveAspectRatio="none"
+          // Deaktiviert Apple Pencil "Scribble" (Kritzeln) nur für dieses Element
+          data-apple-pencil-scribble-enabled="false"
           style={{
             position: "absolute",
             top: 0,
@@ -324,11 +328,23 @@ export default function DrawingSVG({
             touchAction: active
               ? (allowScroll ? "pan-y" : "none")  // pan-y erlaubt vertikales Scrollen
               : "auto",
+            willChange: "transform",
+            userSelect: "none",
+            WebkitUserSelect: "none",
+            WebkitTouchCallout: "none",
           }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerEnd}
           onPointerCancel={handlePointerEnd}
+          // Verhindert Safari "Teilen" Popup und Kontextmenü
+          onContextMenu={(e) => e.preventDefault()}
+          onTouchStart={(e) => {
+            // Verhindert Safari Long-Press Aktionen bei Pen-Input
+            if (active && (e.touches[0] as any)?.touchType === "stylus") {
+              e.preventDefault();
+            }
+          }}
         >
         {/* NEU: Paths mit Pressure rendern */}
         {paths.map((p, i) => renderPressurePath(p, i))}

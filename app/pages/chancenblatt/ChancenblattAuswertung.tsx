@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { jsPDF } from "jspdf";
+import { Filesystem, Directory } from "@capacitor/filesystem";
+import { Share } from "@capacitor/share";
+import { Capacitor } from "@capacitor/core";
 import { ErgebnisTyp } from "./ChancenblattFlow";
 import NameDialog from "../kontaktbogen/NameDialog";
 import { QUESTIONS } from "./ChancenblattQuestions";
@@ -164,10 +167,37 @@ QUESTIONS.forEach((question, index) => {
 
 
   /* =========================
-     DOWNLOAD
+     DOWNLOAD / SHARE
      ========================= */
 
-  doc.save(`Chancenblatt-${kundenName}.pdf`);
+  const fileName = `Chancenblatt-${kundenName}.pdf`;
+
+  if (!Capacitor.isNativePlatform()) {
+    // Browser: normaler Download
+    doc.save(fileName);
+    return;
+  }
+
+  // Native (iOS/Android): PDF speichern und teilen
+  try {
+    const pdfBase64 = doc.output("dataurlstring");
+    const base64 = pdfBase64.split(",")[1];
+
+    const result = await Filesystem.writeFile({
+      path: fileName,
+      data: base64,
+      directory: Directory.Cache,
+    });
+
+    await Share.share({
+      title: "Chancenblatt",
+      text: `Chancenblatt für ${kundenName}`,
+      url: result.uri,
+      dialogTitle: "PDF teilen",
+    });
+  } catch (error) {
+    console.error("Failed to save/share Chancenblatt PDF:", error);
+  }
 };
 
 
