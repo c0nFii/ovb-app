@@ -17,6 +17,12 @@ const config: CapacitorConfig = {
     contentInset: 'never',
     // Status Bar Einstellungen
     preferredContentMode: 'mobile',
+    // WebView Konfiguration für optimierte Stift-Performance
+    limitsNavigationsToAppBoundDomains: false,
+    // Verbesserte Touch-Performance
+    allowsLinkPreview: false,
+    // Apple Pencil Scribble deaktivieren auf WebView-Ebene
+    webContentsDebuggingEnabled: false,
   },
   android: {
     // Android-spezifische Einstellungen

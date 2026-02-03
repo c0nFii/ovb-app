@@ -34,6 +34,37 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
+
+  /* Apple Pencil Scribble komplett deaktivieren */
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+}
+
+/* ======================================================
+   APPLE PENCIL OPTIMIZATION - VERZÖGERUNG ELIMINIEREN
+   ====================================================== */
+
+/* Globales Deaktivieren von Apple Pencil Scribble */
+* {
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Inputs/Textareas dürfen weiterhin selektierbar sein */
+input,
+textarea,
+select,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  -webkit-touch-callout: default;
+  touch-action: auto;
+}
+
+/* Alle SVG-Elemente sollen keine Touch-Verzögerung haben */
+svg {
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ======================================================

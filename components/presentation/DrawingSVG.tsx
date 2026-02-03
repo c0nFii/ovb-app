@@ -25,6 +25,15 @@ function distance(a: Point, b: Point) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
+// NEU: Mittelpunkt zwischen zwei Punkten berechnen (für Glättung)
+function midPoint(a: Point, b: Point): Point {
+  return {
+    x: (a.x + b.x) / 2,
+    y: (a.y + b.y) / 2,
+    pressure: ((a.pressure || 0.5) + (b.pressure || 0.5)) / 2
+  };
+}
+
 // NEU: Berechne Strichdicke basierend auf Druck
 function getPressureWidth(basePressure: number, baseWidth: number): number {
   // Normalisiere Druck (manche Stifte geben 0.5 als "normal" zurück)
@@ -91,6 +100,56 @@ export default function DrawingSVG({
     window.addEventListener("resize", updateSize);
     return () => window.removeEventListener("resize", updateSize);
   }, []);
+
+  /* =========================
+     NATIVE EVENT LISTENERS - KRITISCH FÜR iOS SCRIBBLE
+     ========================= */
+
+  useEffect(() => {
+    const svg = svgRef.current;
+    const container = containerRef.current;
+    if (!svg || !container) return;
+
+    // Diese Funktion blockiert ALLE nativen Browser-Aktionen für Touch/Pointer
+    // WICHTIG: { passive: false } zwingt iOS, auf unseren Code zu warten
+    const preventNativeActions = (e: Event) => {
+      if (!active) return;
+
+      // Für Touch Events: nur bei Single-Touch (Stift) blockieren
+      const touchEvent = e as TouchEvent;
+      if (touchEvent.touches && touchEvent.touches.length === 1) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+
+      // Für alle anderen Events (Pointer, etc.) blockieren wenn kein Touch
+      if (!touchEvent.touches) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    // Native Listener mit { passive: false } - das ist der Schlüssel!
+    // Auf beiden Elementen registrieren für maximale Sicherheit
+    const elements = [svg, container];
+
+    elements.forEach(element => {
+      element.addEventListener('touchstart', preventNativeActions, { passive: false });
+      element.addEventListener('touchmove', preventNativeActions, { passive: false });
+      element.addEventListener('touchend', preventNativeActions, { passive: false });
+      element.addEventListener('wheel', preventNativeActions, { passive: false });
+    });
+
+    return () => {
+      elements.forEach(element => {
+        element.removeEventListener('touchstart', preventNativeActions);
+        element.removeEventListener('touchmove', preventNativeActions);
+        element.removeEventListener('touchend', preventNativeActions);
+        element.removeEventListener('wheel', preventNativeActions);
+      });
+    };
+  }, [active]);
 
   /* =========================
      KOORDINATEN
@@ -164,6 +223,12 @@ export default function DrawingSVG({
      ========================= */
 
   const handlePointerDown = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
+    // WICHTIG: preventDefault() SOFORT aufrufen um Verzögerungen zu vermeiden
+    if (e.pointerType === "pen") {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     // Nicht-Stift: Weiterleiten
     if (e.pointerType !== "pen") {
       forwardClick(e);
@@ -172,8 +237,6 @@ export default function DrawingSVG({
 
     if (!active) return;
 
-    e.preventDefault();
-    e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
 
     const p = getPoint(e);
@@ -202,27 +265,39 @@ export default function DrawingSVG({
     e.preventDefault();
     e.stopPropagation();
 
-    const p = getPoint(e);
+    const rawPoint = getPoint(e);
 
-    if (distance(p, lastPoint.current) < 1) return;
+    // Mindestabstand erhöht für weniger Wackeln
+    if (distance(rawPoint, lastPoint.current) < 2.5) return;
 
-    lastPoint.current = p;
-    
+    // Stärkere Glättung: 55% neuer Punkt + 45% letzter Punkt
+    const smoothedPoint: Point = {
+      x: rawPoint.x * 0.55 + lastPoint.current.x * 0.45,
+      y: rawPoint.y * 0.55 + lastPoint.current.y * 0.45,
+      pressure: rawPoint.pressure || 0.5
+    };
+
+    lastPoint.current = smoothedPoint;
+
     // NEU: Pressure-Point hinzufügen
-    if (p.pressure !== undefined) {
-      currentPressurePoints.current.push({ x: p.x, y: p.y, pressure: p.pressure });
+    if (smoothedPoint.pressure !== undefined) {
+      currentPressurePoints.current.push({
+        x: smoothedPoint.x,
+        y: smoothedPoint.y,
+        pressure: smoothedPoint.pressure
+      });
     }
 
     if (!erase) {
       setCurrentPath((prev) =>
-        prev ? { 
-          ...prev, 
-          d: `${prev.d} L ${p.x} ${p.y}`,
+        prev ? {
+          ...prev,
+          d: `${prev.d} L ${smoothedPoint.x} ${smoothedPoint.y}`,
           pressurePoints: currentPressurePoints.current
         } : prev
       );
     } else {
-      setPaths((prev) => prev.filter((path) => !isPointNearPath(p, path)));
+      setPaths((prev) => prev.filter((path) => !isPointNearPath(smoothedPoint, path)));
     }
   }, [active, erase, getPoint, isPointNearPath, setPaths]);
 
@@ -339,12 +414,7 @@ export default function DrawingSVG({
           onPointerCancel={handlePointerEnd}
           // Verhindert Safari "Teilen" Popup und Kontextmenü
           onContextMenu={(e) => e.preventDefault()}
-          onTouchStart={(e) => {
-            // Verhindert Safari Long-Press Aktionen bei Pen-Input
-            if (active && (e.touches[0] as any)?.touchType === "stylus") {
-              e.preventDefault();
-            }
-          }}
+          // Touch Events werden jetzt via native Listener behandelt (siehe useEffect oben)
         >
         {/* NEU: Paths mit Pressure rendern */}
         {paths.map((p, i) => renderPressurePath(p, i))}

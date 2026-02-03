@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import AppScreenWrapper from "@/components/AppScreenWrapper";
 import TopBar from "@/components/layout/TopBar";
-import NativeDrawingWrapper from "@/components/presentation/NativeDrawingWrapper";
+import DrawingSVG from "@/components/presentation/DrawingSVG";
 import ExportArea from "@/components/export/ExportArea";
 import KontaktbogenForm from "./KontaktbogenForm";
 import NameDialog from "./NameDialog";
@@ -233,7 +233,7 @@ export default function KontaktbogenPage() {
           onTouchEnd={handleTouchEnd}
         >
           <DrawingOverlay active={false}>
-            <NativeDrawingWrapper
+            <DrawingSVG
               active={false}
               erase={mode === "erase"}
               paths={drawingPaths}

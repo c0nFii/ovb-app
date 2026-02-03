@@ -6,7 +6,7 @@ import AppScreenWrapper from "@/components/AppScreenWrapper";
 import TopBar from "@/components/layout/TopBar";
 
 import PulseCircle from "@/components/presentation/PulseCircle";
-import NativeDrawingWrapper, { type Path } from "@/components/presentation/NativeDrawingWrapper";
+import DrawingSVG, { type Path } from "@/components/presentation/DrawingSVG";
 import LaserPointer from "@/components/presentation/LaserPointer";
 import { exportPageContainerAsImage } from "@/components/export/exportPages";
 import { useRouter } from "next/navigation";
@@ -336,7 +336,7 @@ export default function KapitalmarktPage() {
             </div>
 
             {/* Drawing Layer */}
-            <NativeDrawingWrapper
+            <DrawingSVG
               active={isDrawingActive}
               erase={mode === "erase"}
               paths={drawingPaths}

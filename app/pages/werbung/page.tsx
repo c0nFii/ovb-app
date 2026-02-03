@@ -6,7 +6,7 @@ import TopBar from "@/components/layout/TopBar";
 import PulseCircle from "@/components/presentation/PulseCircle";
 import GrundSkel from "./grundskel";
 import WerbungFlow from "./werbung";
-import NativeDrawingWrapper, { type Path } from "@/components/presentation/NativeDrawingWrapper";
+import DrawingSVG, { type Path } from "@/components/presentation/DrawingSVG";
 import LaserPointer from "@/components/presentation/LaserPointer";
 import { exportPageContainerAsImage } from "@/components/export/exportPages";
 import "@/components/export/export.css";
@@ -158,7 +158,7 @@ export default function WerbungPage() {
             </div>
 
             {/* Drawing Layer - z-index unter TopBar */}
-            <NativeDrawingWrapper
+            <DrawingSVG
               active={isDrawingActive}
               erase={mode === "erase"}
               paths={drawingPaths}

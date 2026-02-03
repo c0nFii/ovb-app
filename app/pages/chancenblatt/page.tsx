@@ -3,7 +3,7 @@
 import { useState } from "react";
 import AppScreenWrapper from "@/components/AppScreenWrapper";
 import TopBar from "@/components/layout/TopBar";
-import NativeDrawingWrapper, { type Path } from "@/components/presentation/NativeDrawingWrapper";
+import DrawingSVG, { type Path } from "@/components/presentation/DrawingSVG";
 import ChancenblattFlow from "./ChancenblattFlow";
 import DrawingOverlay from "@/components/presentation/DrawingOverlay";
 import LaserPointer from "@/components/presentation/LaserPointer";
@@ -23,7 +23,7 @@ const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
 <LaserPointer mode={mode} />
 
         <DrawingOverlay active={mode !== "laser"}>
-  <NativeDrawingWrapper
+  <DrawingSVG
     active={mode !== "laser"}
     erase={mode === "erase"}
     paths={drawingPaths}

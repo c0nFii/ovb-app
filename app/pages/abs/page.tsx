@@ -3,7 +3,7 @@
 import { useState, useEffect, useLayoutEffect } from "react";
 import TopBar from "@/components/layout/TopBar";
 import AppScreenWrapper from "@/components/AppScreenWrapper";
-import NativeDrawingWrapper, { type Path } from "@/components/presentation/NativeDrawingWrapper";
+import DrawingSVG, { type Path } from "@/components/presentation/DrawingSVG";
 import LaserPointer from "@/components/presentation/LaserPointer";
 import FlowController from "./FlowController";
 import AnalyseErklaerung from "./AnalyseErklaerung";
@@ -179,7 +179,7 @@ export default function ABSPage() {
             </div>
 
             {/* Drawing Layer */}
-            <NativeDrawingWrapper
+            <DrawingSVG
               active={isDrawingActive}
               erase={mode === "erase"}
               paths={drawingPaths}

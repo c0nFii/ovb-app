@@ -42,8 +42,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="de">
+      <head>
+        <meta name="apple-pencil-scribble" content="disabled" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        data-apple-pencil-scribble-enabled="false"
+        style={{
+          WebkitUserSelect: 'none',
+          WebkitTouchCallout: 'none',
+          touchAction: 'none',
+        } as React.CSSProperties}
       >
         <PenProvider>
           <NotesProvider>
