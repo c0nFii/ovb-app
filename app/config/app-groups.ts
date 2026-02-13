@@ -10,14 +10,14 @@ export type AppGroupConfig = {
 };
 
 export const ROUTE_TO_APP_GROUP: Record<string, AppGroup> = {
-  "/pages/kapitalmarkt": "firmenvorstellung",
-  "/pages/lebensplan": "firmenvorstellung",
-  "/pages/abs": "firmenvorstellung",
-  "/pages/werbung": "firmenvorstellung",
-  "/pages/empfehlung": "firmenvorstellung",
-  "/pages/chancenblatt": "firmenvorstellung",
-  "/pages/kontaktbogen": "firmenvorstellung",
-  "/home": "home",
+  "/firmenvorstellung/pages/kapitalmarkt": "firmenvorstellung",
+  "/firmenvorstellung/pages/lebensplan": "firmenvorstellung",
+  "/firmenvorstellung/pages/abs": "firmenvorstellung",
+  "/firmenvorstellung/pages/werbung": "firmenvorstellung",
+  "/firmenvorstellung/pages/empfehlung": "firmenvorstellung",
+  "/firmenvorstellung/pages/chancenblatt": "firmenvorstellung",
+  "/firmenvorstellung/pages/kontaktbogen": "firmenvorstellung",
+  "/firmenvorstellung/home": "home",
 };
 
 export const APP_GROUP_CONFIG: Record<AppGroup, AppGroupConfig> = {
