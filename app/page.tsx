@@ -161,39 +161,35 @@ export default function DesktopPage() {
         <div className="absolute inset-0 bg-white/10 backdrop-blur-md animate-in fade-in duration-500" />
       )}
 
-      <div className="absolute bottom-0 left-0 right-0 min-h-16 bg-black/20 backdrop-blur-md border-t border-white/20 flex items-center justify-center gap-4 px-4 py-2">
-        <div className="flex items-center gap-3">
-          {minimizedWithTitles.length === 0 && (
-            <div className="text-white/75 text-sm">Keine minimierten Apps</div>
-          )}
+      {minimizedWithTitles.length > 0 && (
+        <div className="absolute bottom-0 left-0 right-0 min-h-16 bg-black/20 backdrop-blur-md border-t border-white/20 flex items-center justify-center gap-4 px-4 py-2">
+          <div className="flex items-center gap-3">
+            {minimizedWithTitles.map((entry) => (
+              <div key={entry.route} className="relative w-10 h-10">
+                <button
+                  onClick={() => router.push(entry.route)}
+                  className="w-10 h-10 rounded-xl bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors"
+                  title={entry.title}
+                  aria-label={entry.title}
+                >
+                  <Image src={entry.icon} alt={entry.title} width={18} height={18} />
+                </button>
 
-          {minimizedWithTitles.map((entry) => (
-            <div key={entry.route} className="relative w-10 h-10">
-              <button
-                onClick={() => router.push(entry.route)}
-                className="w-10 h-10 rounded-xl bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors"
-                title={entry.title}
-                aria-label={entry.title}
-              >
-                <Image src={entry.icon} alt={entry.title} width={18} height={18} />
-              </button>
+                <button
+                  onClick={() => {
+                    removeMinimizedApp(entry.route);
+                    setMinimizedApps(getMinimizedApps());
+                  }}
+                  className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-white text-[#12324e] text-xs font-bold leading-none flex items-center justify-center hover:bg-slate-200"
+                  title={`${entry.title} schließen`}
+                  aria-label={`${entry.title} schließen`}
+                >
+                  x
+                </button>
+              </div>
+            ))}
+          </div>
 
-              <button
-                onClick={() => {
-                  removeMinimizedApp(entry.route);
-                  setMinimizedApps(getMinimizedApps());
-                }}
-                className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-white text-[#12324e] text-xs font-bold leading-none flex items-center justify-center hover:bg-slate-200"
-                title={`${entry.title} schließen`}
-                aria-label={`${entry.title} schließen`}
-              >
-                x
-              </button>
-            </div>
-          ))}
-        </div>
-
-        {minimizedWithTitles.length > 0 && (
           <button
             onClick={() => {
               clearMinimizedApps();
@@ -205,8 +201,8 @@ export default function DesktopPage() {
           >
             <Image src="/trash-icon.png" alt="Löschen" width={52} height={52} className="opacity-90" />
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
