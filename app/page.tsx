@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { APP_CATALOG } from "@/app/config/app-catalog";
@@ -12,15 +12,80 @@ import {
   type MinimizedApp,
 } from "@/components/layout/minimized-apps";
 
+interface IconPosition {
+  id: string;
+  x: number;
+  y: number;
+}
+
+interface Folder {
+  id: string;
+  name: string;
+  appIds: string[];
+  x: number;
+  y: number;
+}
+
+const GRID_SIZE = 100; // Grid cell size in pixels
+const ICON_SIZE = 140; // Icon container size (w-24 h-24 + padding) in pixels
+const STORAGE_KEY = "desktop-icon-positions";
+const FOLDERS_KEY = "desktop-folders";
+const DRAG_THRESHOLD = 5; // Minimum pixels to move before considering it a drag
+const COLLISION_DISTANCE = 100; // Distance in pixels to trigger folder creation
+
 export default function DesktopPage() {
   const router = useRouter();
+  const containerRef = useRef<HTMLDivElement>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isLaunching, setIsLaunching] = useState(false);
   const [minimizedApps, setMinimizedApps] = useState<MinimizedApp[]>([]);
+  const [iconPositions, setIconPositions] = useState<IconPosition[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [wasJustDragging, setWasJustDragging] = useState(false);
+  const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
+  const [folderNameInput, setFolderNameInput] = useState("");
+  const [openingFolderId, setOpeningFolderId] = useState<string | null>(null);
+  const [draggingFromFolder, setDraggingFromFolder] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Initialize icon positions from localStorage or defaults
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      try {
+        const positions = JSON.parse(stored);
+        setIconPositions(positions);
+      } catch {
+        setIconPositions([
+          { id: "firmenvorstellung", x: window.innerWidth - 200, y: 48 },
+          { id: "easy", x: window.innerWidth - 200, y: 200 },
+        ]);
+      }
+    } else {
+      // Default positions - right side, stacked vertically
+      setIconPositions([
+        { id: "firmenvorstellung", x: window.innerWidth - 200, y: 48 },
+        { id: "easy", x: window.innerWidth - 200, y: 200 },
+      ]);
+    }
+
+    // Load folders
+    const storedFolders = localStorage.getItem(FOLDERS_KEY);
+    if (storedFolders) {
+      try {
+        setFolders(JSON.parse(storedFolders));
+      } catch {
+        setFolders([]);
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -77,20 +142,303 @@ export default function DesktopPage() {
     });
   };
 
+  // Snap position to grid
+  const snapToGrid = (pos: number): number => {
+    return Math.round(pos / GRID_SIZE) * GRID_SIZE;
+  };
+
+  // Constrain position within screen bounds
+  const constrainToBounds = (x: number, y: number) => {
+    const maxX = typeof window !== "undefined" ? window.innerWidth - ICON_SIZE : x;
+    const maxY = typeof window !== "undefined" ? window.innerHeight - ICON_SIZE : y;
+    return {
+      x: Math.max(0, Math.min(x, maxX)),
+      y: Math.max(0, Math.min(y, maxY)),
+    };
+  };
+
+  // Save positions to localStorage
+  const savePositions = (positions: IconPosition[]) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(positions));
+  };
+
+  const saveFolders = (folderList: Folder[]) => {
+    localStorage.setItem(FOLDERS_KEY, JSON.stringify(folderList));
+  };
+
+  // Check if two icons collide
+  const checkCollision = (pos1: IconPosition, pos2: IconPosition): boolean => {
+    const distance = Math.sqrt(
+      Math.pow(pos1.x - pos2.x, 2) + Math.pow(pos1.y - pos2.y, 2)
+    );
+    return distance < COLLISION_DISTANCE;
+  };
+
+  // Find which folder an app belongs to
+  const getAppFolder = (appId: string): Folder | undefined => {
+    return folders.find((f) => f.appIds.includes(appId));
+  };
+
+  // Get apps that are not in any folder
+  const getLooseApps = (): IconPosition[] => {
+    return iconPositions.filter((pos) => !getAppFolder(pos.id));
+  };
+
+  const handleMouseDown = (
+    e: React.MouseEvent<HTMLDivElement>,
+    iconId: string,
+    fromFolderId?: string
+  ) => {
+    // Don't drag if clicking with middle mouse or right click
+    if (e.button !== 0) return;
+
+    e.preventDefault();
+    setDraggingId(iconId);
+    setDragStartPos({ x: e.clientX, y: e.clientY });
+    setIsDragging(false); // Reset (will be set to true if moved > threshold)
+    
+    // Track if dragging from folder
+    if (fromFolderId) {
+      setDraggingFromFolder(fromFolderId);
+    }
+
+    // Check if it's a folder
+    const folder = folders.find((f) => f.id === iconId);
+    if (folder) {
+      setDragOffset({
+        x: e.clientX - folder.x,
+        y: e.clientY - folder.y,
+      });
+      return;
+    }
+
+    // Check if it's a loose app
+    const iconPos = iconPositions.find((p) => p.id === iconId);
+    if (iconPos) {
+      setDragOffset({
+        x: e.clientX - iconPos.x,
+        y: e.clientY - iconPos.y,
+      });
+    } else if (fromFolderId) {
+      // Dragging from folder - start from cursor position
+      setDragOffset({
+        x: 70,
+        y: 70,
+      });
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!draggingId) return;
+
+    // Check if drag threshold has been exceeded
+    if (!isDragging) {
+      const distance = Math.sqrt(
+        Math.pow(e.clientX - dragStartPos.x, 2) +
+          Math.pow(e.clientY - dragStartPos.y, 2)
+      );
+      if (distance < DRAG_THRESHOLD) return;
+      setIsDragging(true);
+    }
+
+    const newX = e.clientX - dragOffset.x;
+    const newY = e.clientY - dragOffset.y;
+
+    const snappedPos = constrainToBounds(
+      snapToGrid(newX),
+      snapToGrid(newY)
+    );
+
+    // Update position if it's a folder or an icon
+    const isFolder = draggingId.startsWith("folder-");
+    
+    if (isFolder) {
+      setFolders((prev) =>
+        prev.map((folder) =>
+          folder.id === draggingId ? { ...folder, ...snappedPos } : folder
+        )
+      );
+    } else {
+      // Check if it exists in iconPositions, if not create temporary position
+      setIconPositions((prev) => {
+        const existing = prev.find((p) => p.id === draggingId);
+        if (existing) {
+          return prev.map((pos) =>
+            pos.id === draggingId ? { ...pos, ...snappedPos } : pos
+          );
+        } else {
+          // New temporary position for dragging from folder
+          return [...prev, { id: draggingId, ...snappedPos }];
+        }
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (draggingId) {
+      const isFolder = draggingId.startsWith("folder-");
+      
+      if (isFolder) {
+        // Save folder position
+        saveFolders(folders);
+      } else {
+        // Check if we were dragging from a folder
+        if (draggingFromFolder && isDragging) {
+          // App was dragged out of folder
+          const folder = folders.find((f) => f.id === draggingFromFolder);
+          if (folder) {
+            // Remove app from folder
+            const updatedAppIds = folder.appIds.filter((id) => id !== draggingId);
+            
+            if (updatedAppIds.length < 2) {
+              // Remove folder if < 2 apps left, restore remaining app
+              if (updatedAppIds.length === 1) {
+                const remainingAppId = updatedAppIds[0];
+                // Only filter out the remaining app (the dragged one already has its position)
+                setIconPositions((prev) => [
+                  ...prev.filter((p) => p.id !== remainingAppId),
+                  { id: remainingAppId, x: folder.x, y: folder.y },
+                ]);
+              }
+              
+              const updatedFolders = folders.filter((f) => f.id !== draggingFromFolder);
+              setFolders(updatedFolders);
+              saveFolders(updatedFolders);
+            } else {
+              // Just update folder with remaining apps
+              const updatedFolders = folders.map((f) =>
+                f.id === draggingFromFolder ? { ...f, appIds: updatedAppIds } : f
+              );
+              setFolders(updatedFolders);
+              saveFolders(updatedFolders);
+            }
+            
+            // Close folder modal
+            setOpeningFolderId(null);
+          }
+          
+          setDraggingFromFolder(null);
+          savePositions(iconPositions);
+        } else {
+          // Normal desktop icon drag
+          savePositions(iconPositions);
+          
+          // Check if this app was in a folder - if so, remove it
+          const appFolder = getAppFolder(draggingId);
+          if (appFolder) {
+            const updatedAppIds = appFolder.appIds.filter((id) => id !== draggingId);
+            
+            if (updatedAppIds.length < 2) {
+              // Remove folder if < 2 apps left, restore apps as loose
+              const remainingApps = iconPositions.filter((p) => updatedAppIds.includes(p.id));
+              
+              const restoredApps = remainingApps.concat(
+                updatedAppIds.map((appId) => {
+                  const origIcon = iconPositions.find((p) => p.id === appId);
+                  if (origIcon) return origIcon;
+                  // Fallback position
+                  return { id: appId, x: appFolder.x, y: appFolder.y };
+                })
+              );
+              
+              setIconPositions(restoredApps);
+              savePositions(restoredApps);
+              
+              const updatedFolders = folders.filter((f) => f.id !== appFolder.id);
+              setFolders(updatedFolders);
+              saveFolders(updatedFolders);
+            } else {
+              // Just update folder with remaining apps
+              const updatedFolders = folders.map((f) =>
+                f.id === appFolder.id ? { ...f, appIds: updatedAppIds } : f
+              );
+              setFolders(updatedFolders);
+              saveFolders(updatedFolders);
+            }
+          }
+          
+          // Check for collisions with other icons to create folders
+          const draggedIcon = iconPositions.find((p) => p.id === draggingId);
+          if (draggedIcon && !getAppFolder(draggingId)) {  // Only if not already in a folder
+            const collidingIcon = getLooseApps().find(
+              (p) => p.id !== draggingId && checkCollision(draggedIcon, p)
+            );
+            
+            if (collidingIcon && !getAppFolder(collidingIcon.id)) {
+              // Create folder
+              const folderId = `folder-${Date.now()}`;
+              const newFolder: Folder = {
+                id: folderId,
+                name: `Ordner ${folders.length + 1}`,
+                appIds: [draggingId, collidingIcon.id],
+                x: draggedIcon.x,
+                y: draggedIcon.y,
+              };
+              const updatedFolders = [...folders, newFolder];
+              setFolders(updatedFolders);
+              saveFolders(updatedFolders);
+              
+              // Remove these icons from loose positions
+              setIconPositions((prev) =>
+                prev.filter((p) => p.id !== draggingId && p.id !== collidingIcon.id)
+              );
+              
+              // Set up for renaming
+              setRenamingFolderId(folderId);
+              setFolderNameInput(newFolder.name);
+            }
+          }
+        }
+      }
+      
+      setDraggingId(null);
+      setDraggingFromFolder(null);
+      
+      // Only set wasJustDragging if we actually dragged
+      if (isDragging) {
+        setWasJustDragging(true);
+        setTimeout(() => setWasJustDragging(false), 200);
+      }
+      
+      setIsDragging(false);
+    }
+  };
+
   const handleAppClick = () => {
+    // Don't trigger click if we were just dragging
+    if (wasJustDragging) return;
+
     setIsLaunching(true);
     setTimeout(() => {
       router.push("/firmenvorstellung/pages/home");
     }, 600);
   };
 
-  const handleEasyClick = () => {
+  const handleEasyClick = (e?: React.MouseEvent<HTMLAnchorElement>) => {
+    // Don't trigger click if we were just dragging
+    if (wasJustDragging) {
+      e?.preventDefault();
+      return;
+    }
+
+    // If event exists, allow default link behavior (opening in new tab)
+    // Otherwise, open manually
+    if (!e) {
+      window.open("https://easy.ovb.at/", "_blank", "noreferrer");
+    }
+    
     setIsLaunching(true);
     setTimeout(() => setIsLaunching(false), 600);
   };
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-black font-sans select-none">
+    <div
+      ref={containerRef}
+      className="relative w-full h-screen overflow-hidden bg-black font-sans select-none"
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+    >
       <Image
         src="/pictures/strand.png"
         alt="Desktop Background"
@@ -110,52 +458,351 @@ export default function DesktopPage() {
         </p>
       </div>
 
-      <div className="absolute top-12 right-12 flex flex-col items-center gap-8">
-        <button
-          onClick={handleAppClick}
-          className="group flex flex-col items-center gap-2 focus:outline-none"
-        >
-          <div
-            className={`relative w-24 h-24 bg-white/90 rounded-2xl shadow-xl flex items-center justify-center p-4 transition-all duration-500 hover:scale-105 active:scale-95 ${
-              isLaunching ? "scale-[3] opacity-0" : "scale-100"
-            }`}
-          >
-            <Image
-              src="/ovb.png"
-              alt="Firmenvorstellung"
-              width={48}
-              height={48}
-              className="object-contain"
-            />
-          </div>
-          <span className="text-white text-sm font-medium drop-shadow-md group-hover:bg-black/20 px-2 py-0.5 rounded transition-colors">
-            Firmenvorstellung
-          </span>
-        </button>
 
-        <a
-          href="https://easy.ovb.at/"
-          target="_blank"
-          rel="noreferrer"
-          onClick={handleEasyClick}
-          className="group flex flex-col items-center gap-2 focus:outline-none cursor-pointer"
+
+      {/* Draggable Icons Container */}
+      {getLooseApps().map((pos) => {
+        if (pos.id === "firmenvorstellung") {
+          return (
+            <div
+              key={pos.id}
+              className={`absolute transition-opacity ${
+                isLaunching ? "opacity-0" : "opacity-100"
+              } ${draggingId === pos.id ? "cursor-grabbing" : "cursor-grab"}`}
+              style={{
+                left: `${pos.x}px`,
+                top: `${pos.y}px`,
+                width: `${ICON_SIZE}px`,
+              }}
+              onMouseDown={(e) => handleMouseDown(e, pos.id)}
+            >
+              <button
+                onClick={handleAppClick}
+                className="group flex flex-col items-center gap-2 focus:outline-none w-full"
+              >
+                <div className="relative w-24 h-24 bg-white/90 rounded-2xl shadow-xl flex items-center justify-center p-4 transition-all duration-500 hover:scale-105 active:scale-95">
+                  <Image
+                    src="/ovb.png"
+                    alt="Firmenvorstellung"
+                    width={48}
+                    height={48}
+                    className="object-contain"
+                  />
+                </div>
+                <span className="text-white text-sm font-medium drop-shadow-md group-hover:bg-black/20 px-2 py-0.5 rounded transition-colors">
+                  Firmenvorstellung
+                </span>
+              </button>
+            </div>
+          );
+        } else if (pos.id === "easy") {
+          return (
+            <div
+              key={pos.id}
+              className={`absolute transition-opacity ${
+                isLaunching ? "opacity-0" : "opacity-100"
+              } ${draggingId === pos.id ? "cursor-grabbing" : "cursor-grab"}`}
+              style={{
+                left: `${pos.x}px`,
+                top: `${pos.y}px`,
+                width: `${ICON_SIZE}px`,
+              }}
+              onMouseDown={(e) => handleMouseDown(e, pos.id)}
+            >
+              <a
+                href="https://easy.ovb.at/"
+                target="_blank"
+                rel="noreferrer"
+                onClick={handleEasyClick}
+                className="group flex flex-col items-center gap-2 focus:outline-none cursor-pointer w-full"
+              >
+                <div className="relative w-24 h-24 bg-[#003A66] rounded-2xl shadow-xl flex items-center justify-center p-4 transition-all duration-500 hover:scale-105 active:scale-95">
+                  <Image
+                    src="/ovb2.png"
+                    alt="OVB Easy"
+                    width={48}
+                    height={48}
+                    className="object-contain"
+                  />
+                </div>
+                <span className="text-white text-sm font-medium drop-shadow-md group-hover:bg-black/20 px-2 py-0.5 rounded transition-colors">
+                  OVB Easy
+                </span>
+              </a>
+            </div>
+          );
+        }
+        return null;
+      })}
+      
+      {/* Show all icons that have positions (includes dragged from folder) */}
+      {iconPositions.filter((pos) => getAppFolder(pos.id) && draggingId !== pos.id).length === 0 ? null : 
+        iconPositions.filter((pos) => {
+          // Show if it's NOT in a folder OR it's currently being dragged
+          return getAppFolder(pos.id) && pos.id === draggingId && isDragging;
+        }).map((pos) => {
+          if (pos.id === "firmenvorstellung") {
+            return (
+              <div
+                key={pos.id}
+                className={`absolute transition-opacity opacity-100 cursor-grabbing`}
+                style={{
+                  left: `${pos.x}px`,
+                  top: `${pos.y}px`,
+                  width: `${ICON_SIZE}px`,
+                }}
+              >
+                <div className="group flex flex-col items-center gap-2 focus:outline-none w-full">
+                  <div className="relative w-24 h-24 bg-white/90 rounded-2xl shadow-xl flex items-center justify-center p-4">
+                    <Image
+                      src="/ovb.png"
+                      alt="Firmenvorstellung"
+                      width={48}
+                      height={48}
+                      className="object-contain"
+                    />
+                  </div>
+                  <span className="text-white text-sm font-medium drop-shadow-md px-2 py-0.5 rounded">
+                    Firmenvorstellung
+                  </span>
+                </div>
+              </div>
+            );
+          } else if (pos.id === "easy") {
+            return (
+              <div
+                key={pos.id}
+                className={`absolute transition-opacity opacity-100 cursor-grabbing`}
+                style={{
+                  left: `${pos.x}px`,
+                  top: `${pos.y}px`,
+                  width: `${ICON_SIZE}px`,
+                }}
+              >
+                <div className="group flex flex-col items-center gap-2 focus:outline-none w-full">
+                  <div className="relative w-24 h-24 bg-[#003A66] rounded-2xl shadow-xl flex items-center justify-center p-4">
+                    <Image
+                      src="/ovb2.png"
+                      alt="OVB Easy"
+                      width={48}
+                      height={48}
+                      className="object-contain"
+                    />
+                  </div>
+                  <span className="text-white text-sm font-medium drop-shadow-md px-2 py-0.5 rounded">
+                    OVB Easy
+                  </span>
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })
+      }
+
+      {/* Folders */}
+      {folders.map((folder) => (
+        <div
+          key={folder.id}
+          className={`absolute transition-opacity ${
+            isLaunching ? "opacity-0" : "opacity-100"
+          } ${draggingId === folder.id ? "cursor-grabbing" : "cursor-grab"}`}
+          style={{
+            left: `${folder.x}px`,
+            top: `${folder.y}px`,
+            width: `${ICON_SIZE}px`,
+          }}
+          onMouseDown={(e) => handleMouseDown(e, folder.id)}
         >
-          <div className={`relative w-24 h-24 bg-[#003A66] rounded-2xl shadow-xl flex items-center justify-center p-4 transition-all duration-500 hover:scale-105 active:scale-95 ${
-                isLaunching ? "scale-[3] opacity-0" : "scale-100"
-              }`}>
+          <button
+            onClick={() => !wasJustDragging && setOpeningFolderId(folder.id)}
+            className="group flex flex-col items-center gap-2 focus:outline-none w-full"
+          >
+            <div className="relative w-24 h-24 bg-transparent rounded-2xl  flex items-center justify-center p-4 transition-all duration-500 hover:scale-105 active:scale-95">
               <Image
-                src="/ovb2.png"
-                alt="OVB Easy"
-                width={48}
-                height={48}
+                src="/folder.png"
+                alt="Folder"
+                width={64}
+                height={64}
                 className="object-contain"
               />
             </div>
-          <span className="text-white text-sm font-medium drop-shadow-md group-hover:bg-black/20 px-2 py-0.5 rounded transition-colors">
-            OVB Easy
-          </span>
-        </a>
-      </div>
+            <span className="text-white text-sm font-medium drop-shadow-md group-hover:bg-white/20 px-2 py-0.5 rounded transition-colors break-words text-center max-w-20">
+              {folder.name}
+            </span>
+          </button>
+        </div>
+      ))}
+
+      {/* Folder Renaming Dialog */}
+      {renamingFolderId && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white/15 backdrop-blur-sm z-50">
+          <div className="bg-[#003A66] rounded-2xl p-6 w-80 shadow-2xl border border-white/20">
+            <h2 className="text-white text-lg font-semibold mb-4">Ordner umbenennen</h2>
+            <input
+              type="text"
+              value={folderNameInput}
+              onChange={(e) => setFolderNameInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  const updatedFolders = folders.map((f) =>
+                    f.id === renamingFolderId ? { ...f, name: folderNameInput } : f
+                  );
+                  setFolders(updatedFolders);
+                  saveFolders(updatedFolders);
+                  setRenamingFolderId(null);
+                } else if (e.key === "Escape") {
+                  setRenamingFolderId(null);
+                }
+              }}
+              className="w-full bg-white/10 text-white border border-white/30 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:border-white/60 transition-colors"
+              autoFocus
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  const updatedFolders = folders.map((f) =>
+                    f.id === renamingFolderId ? { ...f, name: folderNameInput } : f
+                  );
+                  setFolders(updatedFolders);
+                  saveFolders(updatedFolders);
+                  setRenamingFolderId(null);
+                }}
+                className="flex-1 bg-white text-[#003A66] rounded-lg py-2 font-medium hover:bg-gray-200 transition-colors"
+              >
+                Fertig
+              </button>
+              <button
+                onClick={() => setRenamingFolderId(null)}
+                className="flex-1 bg-white/10 text-white rounded-lg py-2 font-medium hover:bg-white/20 transition-colors"
+              >
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Folder Contents Modal */}
+      {openingFolderId && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white/15 backdrop-blur-sm z-50">
+          <div className="bg-[#003A66] rounded-2xl p-8 w-full max-w-md shadow-2xl border border-white/20">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <h2 className="text-white text-2xl font-semibold">
+                  {folders.find((f) => f.id === openingFolderId)?.name}
+                </h2>
+                <button
+                  onClick={() => {
+                    const folder = folders.find((f) => f.id === openingFolderId);
+                    if (folder) {
+                      setRenamingFolderId(folder.id);
+                      setFolderNameInput(folder.name);
+                      setOpeningFolderId(null);
+                    }
+                  }}
+                  className="text-white/60 hover:text-white text-sm px-2 py-1 rounded hover:bg-white/10 transition-colors"
+                  title="Umbenennen"
+                >
+                  ✏️
+                </button>
+              </div>
+              <button
+                onClick={() => setOpeningFolderId(null)}
+                className="text-white/60 hover:text-white text-2xl font-light"
+              >
+                ×
+              </button>
+            </div>
+            
+            {/* Icon Grid */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              {folders.find((f) => f.id === openingFolderId)?.appIds.map((appId) => {
+                const isBeingDragged = draggingId === appId && isDragging;
+                
+                return (
+                  <div
+                    key={appId}
+                    className="relative"
+                    onMouseDown={(e) => handleMouseDown(e, appId, openingFolderId)}
+                  >
+                    <button
+                      onClick={() => {
+                        if (wasJustDragging) return;
+                        
+                        if (appId === "firmenvorstellung") {
+                          setOpeningFolderId(null);
+                          setTimeout(() => {
+                            setWasJustDragging(false);
+                            handleAppClick();
+                          }, 100);
+                        } else if (appId === "easy") {
+                          setOpeningFolderId(null);
+                          setTimeout(() => {
+                            setWasJustDragging(false);
+                            handleEasyClick();
+                          }, 100);
+                        }
+                      }}
+                      className={`flex flex-col items-center gap-2 cursor-grab active:cursor-grabbing w-full transition-opacity ${
+                        isBeingDragged ? "opacity-30" : "opacity-100"
+                      }`}
+                    >
+                      <div className={`w-20 h-20 rounded-2xl shadow-xl flex items-center justify-center p-3 transition-all duration-300 hover:scale-105 ${
+                        appId === "firmenvorstellung" ? "bg-white/90" : appId === "easy" ? "bg-[#003A66]" : "bg-white/90"
+                      }`}>
+                        <Image
+                          src={appId === "firmenvorstellung" ? "/ovb.png" : appId === "easy" ? "/ovb2.png" : "/ovb.png"}
+                          alt={appId}
+                          width={48}
+                          height={48}
+                          className="object-contain pointer-events-none"
+                          draggable={false}
+                        />
+                      </div>
+                      <span className="text-white text-xs font-medium text-center line-clamp-2">
+                        {appId === "firmenvorstellung" ? "Firmenvorstellung" : appId === "easy" ? "OVB Easy" : appId}
+                      </span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            
+            <p className="text-white/50 text-xs text-center">
+              Drag & Drop zum Rausziehen
+            </p>
+          </div>
+
+          {/* Dragged Icon from Folder - follows cursor */}
+          {draggingFromFolder === openingFolderId && draggingId && isDragging && (
+            <div
+              className="fixed pointer-events-none z-[60]"
+              style={{
+                left: `${iconPositions.find((p) => p.id === draggingId)?.x ?? 0}px`,
+                top: `${iconPositions.find((p) => p.id === draggingId)?.y ?? 0}px`,
+              }}
+            >
+              <div className="flex flex-col items-center gap-2 opacity-90">
+                <div className={`w-20 h-20 rounded-2xl shadow-2xl flex items-center justify-center p-3 ${
+                  draggingId === "firmenvorstellung" ? "bg-white/90" : draggingId === "easy" ? "bg-[#003A66]" : "bg-white/90"
+                }`}>
+                  <Image
+                    src={draggingId === "firmenvorstellung" ? "/ovb.png" : draggingId === "easy" ? "/ovb2.png" : "/ovb.png"}
+                    alt={draggingId}
+                    width={48}
+                    height={48}
+                    className="object-contain"
+                  />
+                </div>
+                <span className="text-white text-xs font-medium text-center">
+                  {draggingId === "firmenvorstellung" ? "Firmenvorstellung" : draggingId === "easy" ? "OVB Easy" : draggingId}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {isLaunching && (
         <div className="absolute inset-0 bg-white/10 backdrop-blur-md animate-in fade-in duration-500" />
