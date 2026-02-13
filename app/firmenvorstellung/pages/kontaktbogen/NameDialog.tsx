@@ -1,4 +1,4 @@
-import { OVB_BLUE } from "./page";
+import { OVB_BLUE } from "./kontaktbogenShared";
 
 export default function NameDialog({
   value,

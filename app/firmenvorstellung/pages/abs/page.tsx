@@ -3,6 +3,7 @@
 import { useState, useEffect, useLayoutEffect } from "react";
 import TopBar from "@/components/layout/TopBar";
 import AppScreenWrapper from "@/components/AppScreenWrapper";
+import { useRemoveFromMinimized } from "@/components/layout/useRemoveFromMinimized";
 import DrawingSVG, { type Path } from "@/components/presentation/DrawingSVG";
 import LaserPointer from "@/components/presentation/LaserPointer";
 import FlowController from "./FlowController";
@@ -15,6 +16,7 @@ import { useRouter } from "next/navigation";
 const TOPBAR_HEIGHT = 76;
 
 export default function ABSPage() {
+  useRemoveFromMinimized();
   const [mode, setMode] = useState<"normal" | "draw" | "erase" | "laser">("draw");
   const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
   
@@ -117,7 +119,7 @@ export default function ABSPage() {
     await takeScreenshot("absScreenshot3");
     
     // Navigation zur nächsten Seite
-    router.push("/pages/werbung"); 
+    router.push("/firmenvorstellung/pages/werbung"); 
   };
 
   return (

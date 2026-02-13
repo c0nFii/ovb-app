@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import AppScreenWrapper from "@/components/AppScreenWrapper";
 import TopBar from "@/components/layout/TopBar";
+import { useRemoveFromMinimized } from "@/components/layout/useRemoveFromMinimized";
 import DrawingSVG from "@/components/presentation/DrawingSVG";
 import ExportArea from "@/components/export/ExportArea";
 import KontaktbogenForm from "./KontaktbogenForm";
@@ -13,23 +14,15 @@ import DrawingOverlay from "@/components/presentation/DrawingOverlay";
 import { exportKontaktbogenToPDF } from "@/components/export/exportController";
 import { useNotes } from "@/components/layout/NotesContext";
 import { CleanupDialog } from "@/components/export/cleanUpDialog";
-
+import { OVB_BLUE, Person } from "./kontaktbogenShared";
 import "./kontaktbogen.css";
 
-export const OVB_BLUE = "#013F72";
 
 /* =========================
    TYPES
    ========================= */
 
-export type Person = {
-  name: string;
-  ort: string;
-  alter: string;
-  beruf: string;
-  telefon: string;
-  bemerkung: string;
-};
+// `Person` type is imported from `kontaktbogenShared`
 
 export type Path = {
   d: string;
@@ -42,6 +35,7 @@ export type Path = {
    ========================= */
 
 export default function KontaktbogenPage() {
+  useRemoveFromMinimized();
   const [mode, setMode] =
     useState<"normal" | "draw" | "erase" | "laser">("draw");
 

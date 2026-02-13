@@ -223,14 +223,19 @@ export default function DrawingSVG({
      ========================= */
 
   const handlePointerDown = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
+    // Zeichnen erlauben für: Stift ODER Shift + Maus
+    const isDrawingInput = 
+      e.pointerType === "pen" || 
+      (e.pointerType === "mouse" && e.shiftKey);
+
     // WICHTIG: preventDefault() SOFORT aufrufen um Verzögerungen zu vermeiden
-    if (e.pointerType === "pen") {
+    if (isDrawingInput) {
       e.preventDefault();
       e.stopPropagation();
     }
 
-    // Nicht-Stift: Weiterleiten
-    if (e.pointerType !== "pen") {
+    // Nicht-Zeichnen-Input: Weiterleiten (normale Mausklicks, Touch)
+    if (!isDrawingInput) {
       forwardClick(e);
       return;
     }
@@ -258,8 +263,12 @@ export default function DrawingSVG({
   }, [active, erase, color, width, getPoint, isPointNearPath, setPaths, forwardClick]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
-    // Nur Stift-Events verarbeiten
-    if (e.pointerType !== "pen") return;
+    // Nur Zeichnen-Input verarbeiten: Stift ODER Shift + Maus
+    const isDrawingInput = 
+      e.pointerType === "pen" || 
+      (e.pointerType === "mouse" && e.shiftKey);
+    
+    if (!isDrawingInput) return;
     if (!active || !lastPoint.current) return;
 
     e.preventDefault();
@@ -302,8 +311,12 @@ export default function DrawingSVG({
   }, [active, erase, getPoint, isPointNearPath, setPaths]);
 
   const handlePointerEnd = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
-    // Nicht-Stift Events ignorieren (wurden bei PointerDown schon weitergeleitet)
-    if (e.pointerType !== "pen") {
+    // Nur Zeichnen-Input verarbeiten: Stift ODER Shift + Maus
+    const isDrawingInput = 
+      e.pointerType === "pen" || 
+      (e.pointerType === "mouse" && e.shiftKey);
+    
+    if (!isDrawingInput) {
       return;
     }
 

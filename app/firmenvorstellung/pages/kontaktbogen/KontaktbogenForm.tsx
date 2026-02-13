@@ -1,4 +1,4 @@
-import { Person, OVB_BLUE } from "./page";
+import { Person } from "./kontaktbogenShared";
 import { Field, NavDot } from "./KontaktbogenFields";
 
 export default function KontaktbogenForm({
