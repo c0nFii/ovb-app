@@ -1,4 +1,4 @@
-import { OVB_BLUE } from "@/app/pages/kontaktbogen/page";
+import { OVB_BLUE } from "@/app/firmenvorstellung/pages/kontaktbogen/kontaktbogenShared";
 
 
 

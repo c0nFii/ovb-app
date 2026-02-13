@@ -4,6 +4,7 @@ import { useState, useEffect, useLayoutEffect } from "react";
 
 import AppScreenWrapper from "@/components/AppScreenWrapper";
 import TopBar from "@/components/layout/TopBar";
+import { useRemoveFromMinimized } from "@/components/layout/useRemoveFromMinimized";
 
 import PulseCircle from "@/components/presentation/PulseCircle";
 import DrawingSVG, { type Path } from "@/components/presentation/DrawingSVG";
@@ -14,6 +15,7 @@ import { useRouter } from "next/navigation";
 const TOPBAR_HEIGHT = 76;
 
 export default function KapitalmarktPage() {
+  useRemoveFromMinimized();
   const [started, setStarted] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
   const [mode, setMode] =
@@ -134,7 +136,7 @@ export default function KapitalmarktPage() {
     } catch (error) {
       console.error("Export failed:", error);
     }
-    router.push("/pages/lebensplan");
+    router.push("/firmenvorstellung/pages/lebensplan");
   };
 
   return (

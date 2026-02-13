@@ -1,10 +1,9 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { APP_CATALOG } from "@/app/config/app-catalog";
-import { getAppGroup, getAppGroupIcon } from "@/app/config/app-groups";
 import {
   clearMinimizedApps,
   getMinimizedApps,
@@ -25,39 +24,15 @@ export default function DesktopPage() {
 
   useEffect(() => {
     setMinimizedApps(getMinimizedApps());
-
-    // Listen for session storage changes (when apps are minimized/removed)
-    const handleStorageChange = () => {
-      setMinimizedApps(getMinimizedApps());
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    // Custom event für changes im gleichen Tab
-    window.addEventListener("minimized-apps-changed", handleStorageChange);
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("minimized-apps-changed", handleStorageChange);
-    };
   }, []);
 
   const minimizedWithTitles = useMemo(() => {
     return minimizedApps.map((entry) => {
       const known = APP_CATALOG.find((app) => app.route === entry.route);
-      const appGroup = getAppGroup(entry.route);
-      
-      // Use app group icon if available, otherwise fall back to catalog icon
-      let icon = "/ovb.png";
-      if (appGroup) {
-        icon = getAppGroupIcon(appGroup);
-      } else if (known?.icon) {
-        icon = known.icon;
-      }
-      
       return {
         ...entry,
         title: known?.title ?? entry.title,
-        icon,
+        icon: known?.icon ?? "/ovb.png",
       };
     });
   }, [minimizedApps]);
@@ -80,13 +55,8 @@ export default function DesktopPage() {
   const handleAppClick = () => {
     setIsLaunching(true);
     setTimeout(() => {
-      router.push("/firmenvorstellung/pages/home");
+      router.push("/home");
     }, 600);
-  };
-
-  const handleEasyClick = () => {
-    setIsLaunching(true);
-    setTimeout(() => setIsLaunching(false), 600);
   };
 
   return (
@@ -123,8 +93,8 @@ export default function DesktopPage() {
             <Image
               src="/ovb.png"
               alt="Firmenvorstellung"
-              width={48}
-              height={48}
+              width={64}
+              height={64}
               className="object-contain"
             />
           </div>
@@ -132,37 +102,18 @@ export default function DesktopPage() {
             Firmenvorstellung
           </span>
         </button>
-
-        <a
-          href="https://easy.ovb.at/"
-          target="_blank"
-          rel="noreferrer"
-          onClick={handleEasyClick}
-          className="group flex flex-col items-center gap-2 focus:outline-none cursor-pointer"
-        >
-          <div className={`relative w-24 h-24 bg-[#003A66] rounded-2xl shadow-xl flex items-center justify-center p-4 transition-all duration-500 hover:scale-105 active:scale-95 ${
-                isLaunching ? "scale-[3] opacity-0" : "scale-100"
-              }`}>
-              <Image
-                src="/ovb2.png"
-                alt="OVB Easy"
-                width={48}
-                height={48}
-                className="object-contain"
-              />
-            </div>
-          <span className="text-white text-sm font-medium drop-shadow-md group-hover:bg-black/20 px-2 py-0.5 rounded transition-colors">
-            OVB Easy
-          </span>
-        </a>
       </div>
 
       {isLaunching && (
         <div className="absolute inset-0 bg-white/10 backdrop-blur-md animate-in fade-in duration-500" />
       )}
 
-      <div className="absolute bottom-0 left-0 right-0 min-h-16 bg-black/20 backdrop-blur-md border-t border-white/20 flex items-center justify-center gap-4 px-4 py-2">
+      <div className="absolute bottom-0 left-0 right-0 min-h-16 bg-black/20 backdrop-blur-md border-t border-white/20 flex items-center justify-between gap-4 px-4 py-2">
         <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+            <Image src="/ovb.png" alt="Start" width={20} height={20} className="opacity-80" />
+          </div>
+
           {minimizedWithTitles.length === 0 && (
             <div className="text-white/75 text-sm">Keine minimierten Apps</div>
           )}
@@ -184,8 +135,8 @@ export default function DesktopPage() {
                   setMinimizedApps(getMinimizedApps());
                 }}
                 className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-white text-[#12324e] text-xs font-bold leading-none flex items-center justify-center hover:bg-slate-200"
-                title={`${entry.title} schließen`}
-                aria-label={`${entry.title} schließen`}
+                title={`${entry.title} schlie�en`}
+                aria-label={`${entry.title} schlie�en`}
               >
                 x
               </button>
@@ -199,11 +150,9 @@ export default function DesktopPage() {
               clearMinimizedApps();
               setMinimizedApps([]);
             }}
-            className="h-10 w-10 rounded-xl  hover:bg-white/25 flex items-center justify-center transition-colors absolute right-4"
-            title="Taskleiste leeren"
-            aria-label="Taskleiste leeren"
+            className="h-10 px-3 rounded-xl bg-white/15 hover:bg-white/25 text-white text-sm transition-colors"
           >
-            <Image src="/trash-icon.png" alt="Löschen" width={52} height={52} className="opacity-90" />
+            Taskleiste leeren
           </button>
         )}
       </div>

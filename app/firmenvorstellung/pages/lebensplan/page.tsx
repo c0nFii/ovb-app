@@ -1,26 +1,23 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect } from "react";
-import AppScreenWrapper from "@/components/AppScreenWrapper";
+import { useEffect, useState, useLayoutEffect } from "react";
 import TopBar from "@/components/layout/TopBar";
-import PulseCircle from "@/components/presentation/PulseCircle";
-import GrundSkel from "./grundskel";
-import WerbungFlow from "./werbung";
+import AppScreenWrapper from "@/components/AppScreenWrapper";
+import { useRemoveFromMinimized } from "@/components/layout/useRemoveFromMinimized";
 import DrawingSVG, { type Path } from "@/components/presentation/DrawingSVG";
 import LaserPointer from "@/components/presentation/LaserPointer";
+import FlowController from "./FlowController";
+import { useRouter } from "next/navigation";
 import { exportPageContainerAsImage } from "@/components/export/exportPages";
 import "@/components/export/export.css";
-import { useRouter } from "next/navigation";
 
 const TOPBAR_HEIGHT = 66; // Feste TopBar Höhe (wie EmpfehlungPage)
 
-export default function WerbungPage() {
-  const [started, setStarted] = useState(false);
+export default function FinanziellerLebensplanPage() {
+  useRemoveFromMinimized();
   const [mode, setMode] =
     useState<"normal" | "draw" | "erase" | "laser">("draw");
   const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
-  const [showWerbung, setShowWerbung] = useState(false);
-
   const [flowCompleted, setFlowCompleted] = useState(false);
   const [showWeiterButton, setShowWeiterButton] = useState(false);
 
@@ -48,14 +45,6 @@ export default function WerbungPage() {
   }, []);
 
   /* =========================
-     FLOW START
-     ========================= */
-
-  const handleFinish = () => {
-    setShowWerbung(true);
-  };
-
-  /* =========================
      BUTTON DELAY (2 SEK)
      ========================= */
 
@@ -75,27 +64,28 @@ export default function WerbungPage() {
 
   const handleWeiter = async () => {
     setShowWeiterButton(false);
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
     try {
       const image = await exportPageContainerAsImage({
-        containerId: "werbung-export",
+        containerId: "lebensplan-export",
         backgroundColor: "#ffffff",
         quality: 0.85,
       });
-      sessionStorage.setItem("werbungScreenshot", image);
+
+      if (typeof image === "string" && image.startsWith("data:image")) {
+        sessionStorage.setItem("lebensplanScreenshot", image);
+      } else {
+        console.warn("Export returned invalid image, skipping sessionStorage set.", image);
+      }
     } catch (error) {
       console.error("Export failed:", error);
     }
-    
-    router.push("/pages/empfehlung");
+
+    router.push("/firmenvorstellung/pages/abs");
   };
 
   const isDrawingActive = mode !== "laser"; // Zeichnen aktiv außer im Laser-Modus
-
-  /* =========================
-     RENDER
-     ========================= */
 
   return (
     <>
@@ -105,8 +95,8 @@ export default function WerbungPage() {
       <AppScreenWrapper>
         {/* Export Container - beginnt unter TopBar */}
         {contentHeight > 0 && (
-          <div 
-            id="werbung-export"
+          <div
+            id="lebensplan-export"
             style={{
               position: "absolute",
               top: TOPBAR_HEIGHT,
@@ -127,34 +117,8 @@ export default function WerbungPage() {
             >
               <LaserPointer mode={mode} />
 
-              {!started && (
-                <PulseCircle
-                  onClick={() => setStarted(true)}
-                  style={{
-                    position: "absolute",
-                    top: "50%",
-                    left: "50%",
-                    transform: "translate(-50%, -50%)",
-                    zIndex: 50,
-                    pointerEvents: "auto",
-                  }}
-                />
-              )}
-
-              {started && (
-                <GrundSkel
-                  mode={mode}
-                  start={true}
-                  onFinish={handleFinish}
-                />
-              )}
-
-              {showWerbung && (
-                <WerbungFlow
-                  mode={mode}
-                  onComplete={() => setFlowCompleted(true)}
-                />
-              )}
+              {/* Präsentations-Flow */}
+              <FlowController onComplete={() => setFlowCompleted(true)} />
             </div>
 
             {/* Drawing Layer - z-index unter TopBar */}
@@ -169,10 +133,7 @@ export default function WerbungPage() {
 
         {/* Weiter Button */}
         {showWeiterButton && (
-          <button
-            className="werbung-weiter-button"
-            onClick={handleWeiter}
-          >
+          <button className="werbung-weiter-button" onClick={handleWeiter}>
             Weiter
           </button>
         )}

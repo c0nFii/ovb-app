@@ -2,42 +2,63 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import PenOptionsPopover from "./PenOptionsPopover";
 import { PresentationMode } from "@/app/types/presentation";
 import { usePen } from "./PenContext";
-import NotesPopup from "@/components/NotesPopup";
+import NotesPopup from "@/app/firmenvorstellung/pages/home/NotesPopup";
+import { APP_CATALOG } from "@/app/config/app-catalog";
+import { addMinimizedApp } from "./minimized-apps";
 
 export default function TopBar({
   mode,
   setMode,
   onSave,
+  showDraw = true,
+  showErase = true,
+  showLaser = true,
+  showHome = true,
+  showNavIcons = true,
+  height = 76,
 }: {
   mode: PresentationMode;
   setMode: (m: PresentationMode) => void;
   onSave?: () => void;
+  showDraw?: boolean;
+  showErase?: boolean;
+  showLaser?: boolean;
+  showHome?: boolean;
+  showNavIcons?: boolean;
+  height?: number;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
 
-  // 🔥 Globaler Pen-State
   const { color, width, setColor, setWidth } = usePen();
 
-  // 🔥 Popover States
   const [showPenOptions, setShowPenOptions] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
 
   const nextPageMap: Record<string, string | null> = {
-    "/": "/pages/kapitalmarkt",
-    "/pages/kapitalmarkt": "/pages/lebensplan",
-    "/pages/lebensplan": "/pages/abs",
-    "/pages/abs": "/pages/werbung",
-    "/pages/werbung": "/pages/empfehlung",
-    "/pages/empfehlung": null,
+    "/": "/firmenvorstellung/pages/kapitalmarkt",
+    "/firmenvorstellung/pages/kapitalmarkt": "/firmenvorstellung/pages/lebensplan",
+    "/firmenvorstellung/pages/lebensplan": "/firmenvorstellung/pages/abs",
+    "/firmenvorstellung/pages/abs": "/firmenvorstellung/pages/werbung",
+    "/firmenvorstellung/pages/werbung": "/firmenvorstellung/pages/empfehlung",
+    "/firmenvorstellung/pages/empfehlung": null,
   };
 
   const nextPage = nextPageMap[pathname] ?? null;
-  const isKontaktbogen = pathname === "/pages/kontaktbogen";
+  const isKontaktbogen = pathname === "/firmenvorstellung/pages/kontaktbogen";
+
+  const handleMinimize = () => {
+    const appTitle =
+      APP_CATALOG.find((entry) => entry.route === pathname)?.title ?? "Aktuelle App";
+
+    addMinimizedApp(pathname, appTitle);
+    router.push("/");
+  };
 
   return (
     <>
@@ -47,9 +68,11 @@ export default function TopBar({
           top: 0,
           left: 0,
           width: "100%",
-          background: "rgba(255,255,255,0.85)",
+          height: height,
+          background: "rgb(255, 255, 255)",
           zIndex: 9999,
           padding: "8px 24px",
+          boxSizing: "border-box",
         }}
       >
         <div
@@ -60,35 +83,63 @@ export default function TopBar({
             color: "#002b5c",
           }}
         >
-          {/* LINKS */}
           <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-  {/* 🏠 HOME */}
-  <Link href="/">
-    <Image
-      src="/home-icon.png"
-      alt="Startseite"
-      width={50}
-      height={50}
-      className="cursor-pointer transition-transform hover:scale-110"
-    />
-  </Link>
+            <Link href="/" title="Desktop anzeigen" aria-label="Desktop anzeigen">
+              <Image
+                src="/desktop-icon.png"
+                alt="Desktop anzeigen"
+                width={42}
+                height={42}
+                className="cursor-pointer transition-transform hover:scale-110"
+              />
+            </Link>
 
-  {/* 📝 NOTIZEN */}
-  <Tool
-    icon="/icons/notizen.png"
-    active={showNotes}
-    onClick={() => {
-      setShowPenOptions(false);
-      setShowNotes((v) => !v);
-    }}
-  />
-</div>
+            <button
+              onClick={handleMinimize}
+              style={{
+                background: "transparent",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                display: "grid",
+                placeItems: "center",
+              }}
+              aria-label="Minimieren"
+              title="Minimieren"
+            >
+              <Image
+                src="/minimieren-icon.png"
+                alt="Minimieren"
+                width={42}
+                height={42}
+                className="transition-transform hover:scale-110"
+              />
+            </button>
 
+            {showHome && (
+              <Link href="/firmenvorstellung/pages/home">
+                <Image
+                  src="/home-icon.png"
+                  alt="Startseite"
+                  width={50}
+                  height={50}
+                  className="cursor-pointer transition-transform hover:scale-110"
+                />
+              </Link>
+            )}
 
-          {/* MITTE — Tools */}
+            <Tool
+              icon="/icons/notizen.png"
+              active={showNotes}
+              onClick={() => {
+                setShowPenOptions(false);
+                setShowNotes((v) => !v);
+              }}
+            />
+          </div>
+
           <div style={{ display: "flex", gap: 16, justifyContent: "center" }}>
-            {/* ✏️ Stift - Nicht im Kontaktbogen */}
-            {!isKontaktbogen && (
+            {!isKontaktbogen && showDraw && (
               <Tool
                 icon="/icons/stift.png"
                 active={mode === "draw"}
@@ -104,8 +155,7 @@ export default function TopBar({
               />
             )}
 
-            {/* Radierer - Nicht im Kontaktbogen */}
-            {!isKontaktbogen && (
+            {!isKontaktbogen && showErase && (
               <Tool
                 icon="/icons/radierer.png"
                 active={mode === "erase"}
@@ -117,29 +167,34 @@ export default function TopBar({
               />
             )}
 
-            <Tool
-              icon="/icons/laserpointer.png"
-              active={mode === "laser"}
-              onClick={() => {
-                setMode("laser");
-                setShowPenOptions(false);
-                setShowNotes(false);
-              }}
-            />
+            {showLaser && (
+              <Tool
+                icon="/icons/laserpointer.png"
+                active={mode === "laser"}
+                onClick={() => {
+                  setMode("laser");
+                  setShowPenOptions(false);
+                  setShowNotes(false);
+                }}
+              />
+            )}
 
             {onSave && <Tool icon="/icons/save.png" onClick={onSave} />}
           </div>
 
-          {/* RECHTS */}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 16 }}>
-            <NavIcon
-              src="/icons/arrow-left.png"
-              onClick={() => window.history.back()}
-            />
-            <NavIcon
-              src="/icons/refresh-icon.png"
-              onClick={() => window.location.reload()}
-            />
+            {showNavIcons && (
+              <>
+                <NavIcon
+                  src="/icons/arrow-left.png"
+                  onClick={() => window.history.back()}
+                />
+                <NavIcon
+                  src="/icons/refresh-icon.png"
+                  onClick={() => window.location.reload()}
+                />
+              </>
+            )}
 
             {nextPage && (
               <Link href={nextPage}>
@@ -154,7 +209,6 @@ export default function TopBar({
           </div>
         </div>
 
-        {/* 🔥 PEN OPTIONS POPOVER */}
         {showPenOptions && (
           <PenOptionsPopover
             currentColor={color}
@@ -169,15 +223,10 @@ export default function TopBar({
         )}
       </div>
 
-      {/* 📝 NOTES POPUP */}
       {showNotes && <NotesPopup onClose={() => setShowNotes(false)} />}
     </>
   );
 }
-
-/* =========================
-   SUB COMPONENTS
-   ========================= */
 
 function Tool({
   icon,

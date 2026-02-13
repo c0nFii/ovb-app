@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppScreenWrapper from "@/components/AppScreenWrapper";
 import TopBar from "@/components/layout/TopBar";
+import { useRemoveFromMinimized } from "@/components/layout/useRemoveFromMinimized";
 import DrawingSVG, { type Path } from "@/components/presentation/DrawingSVG";
 import ChancenblattFlow from "./ChancenblattFlow";
 import DrawingOverlay from "@/components/presentation/DrawingOverlay";
@@ -11,6 +12,7 @@ import LaserPointer from "@/components/presentation/LaserPointer";
 const OVB_BLUE = "#013F72";
 
 export default function ChancenblattPage() {
+  useRemoveFromMinimized();
   const [started, setStarted] = useState(false);
   const [mode, setMode] =
     useState<"normal" | "draw" | "erase" | "laser">("draw");

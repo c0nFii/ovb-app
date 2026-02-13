@@ -1,24 +1,26 @@
 "use client";
 
-import { useEffect, useState, useLayoutEffect } from "react";
-import TopBar from "@/components/layout/TopBar";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import AppScreenWrapper from "@/components/AppScreenWrapper";
+import TopBar from "@/components/layout/TopBar";
+import { useRemoveFromMinimized } from "@/components/layout/useRemoveFromMinimized";
+import PulseCircle from "@/components/presentation/PulseCircle";
+import EmpfehlungFlow from "./EmpfehlungFlow";
 import DrawingSVG, { type Path } from "@/components/presentation/DrawingSVG";
 import LaserPointer from "@/components/presentation/LaserPointer";
-import FlowController from "./FlowController";
-import { useRouter } from "next/navigation";
 import { exportPageContainerAsImage } from "@/components/export/exportPages";
-import "@/components/export/export.css";
+import { useRouter } from "next/navigation";
 
-const TOPBAR_HEIGHT = 66; // Feste TopBar Höhe (wie EmpfehlungPage)
+const TOPBAR_HEIGHT = 66; // Feste TopBar Höhe (50px Icon + 8px padding oben/unten)
 
-export default function FinanziellerLebensplanPage() {
-  const [mode, setMode] =
-    useState<"normal" | "draw" | "erase" | "laser">("draw");
+export default function EmpfehlungPage() {
+  useRemoveFromMinimized();
+  const [started, setStarted] = useState(false);
+  const [mode, setMode] = useState<"normal" | "draw" | "erase" | "laser">("draw");
   const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
   const [flowCompleted, setFlowCompleted] = useState(false);
   const [showWeiterButton, setShowWeiterButton] = useState(false);
-
+  
   const [contentHeight, setContentHeight] = useState(0);
 
   const router = useRouter();
@@ -43,44 +45,34 @@ export default function FinanziellerLebensplanPage() {
   }, []);
 
   /* =========================
-     BUTTON DELAY (2 SEK)
+     BUTTON DELAY
      ========================= */
 
   useEffect(() => {
     if (!flowCompleted) return;
-
-    const t = setTimeout(() => {
-      setShowWeiterButton(true);
-    }, 2000);
-
+    const t = setTimeout(() => setShowWeiterButton(true), 2000);
     return () => clearTimeout(t);
   }, [flowCompleted]);
 
   /* =========================
-     WEITER → EXPORT + NAV
+     EXPORT + NAV
      ========================= */
 
   const handleWeiter = async () => {
     setShowWeiterButton(false);
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     try {
       const image = await exportPageContainerAsImage({
-        containerId: "lebensplan-export",
+        containerId: "empfehlung-export",
         backgroundColor: "#ffffff",
         quality: 0.85,
       });
-
-      if (typeof image === "string" && image.startsWith("data:image")) {
-        sessionStorage.setItem("lebensplanScreenshot", image);
-      } else {
-        console.warn("Export returned invalid image, skipping sessionStorage set.", image);
-      }
+      sessionStorage.setItem("empfehlungScreenshot", image);
     } catch (error) {
       console.error("Export failed:", error);
     }
-
-    router.push("/pages/abs");
+    router.push("/firmenvorstellung/pages/kontaktbogen");
   };
 
   const isDrawingActive = mode !== "laser"; // Zeichnen aktiv außer im Laser-Modus
@@ -93,8 +85,8 @@ export default function FinanziellerLebensplanPage() {
       <AppScreenWrapper>
         {/* Export Container - beginnt unter TopBar */}
         {contentHeight > 0 && (
-          <div
-            id="lebensplan-export"
+          <div 
+            id="empfehlung-export"
             style={{
               position: "absolute",
               top: TOPBAR_HEIGHT,
@@ -115,8 +107,26 @@ export default function FinanziellerLebensplanPage() {
             >
               <LaserPointer mode={mode} />
 
-              {/* Präsentations-Flow */}
-              <FlowController onComplete={() => setFlowCompleted(true)} />
+              {!started && (
+                <PulseCircle
+                  onClick={() => setStarted(true)}
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    zIndex: 9999,
+                    pointerEvents: "auto",
+                  }}
+                />
+              )}
+
+              {started && (
+                <EmpfehlungFlow 
+                  containerHeight={contentHeight}
+                  onComplete={() => setFlowCompleted(true)}
+                />
+              )}
             </div>
 
             {/* Drawing Layer - z-index unter TopBar */}
@@ -131,7 +141,10 @@ export default function FinanziellerLebensplanPage() {
 
         {/* Weiter Button */}
         {showWeiterButton && (
-          <button className="werbung-weiter-button" onClick={handleWeiter}>
+          <button
+            className="werbung-weiter-button"
+            onClick={handleWeiter}
+          >
             Weiter
           </button>
         )}

@@ -1,24 +1,31 @@
 "use client";
 
-import { useState, useEffect, useRef, useLayoutEffect } from "react";
+import { useState, useEffect, useLayoutEffect } from "react";
 import AppScreenWrapper from "@/components/AppScreenWrapper";
 import TopBar from "@/components/layout/TopBar";
+import { useRemoveFromMinimized } from "@/components/layout/useRemoveFromMinimized";
 import PulseCircle from "@/components/presentation/PulseCircle";
-import EmpfehlungFlow from "./EmpfehlungFlow";
+import GrundSkel from "./grundskel";
+import WerbungFlow from "./werbung";
 import DrawingSVG, { type Path } from "@/components/presentation/DrawingSVG";
 import LaserPointer from "@/components/presentation/LaserPointer";
 import { exportPageContainerAsImage } from "@/components/export/exportPages";
+import "@/components/export/export.css";
 import { useRouter } from "next/navigation";
 
-const TOPBAR_HEIGHT = 66; // Feste TopBar Höhe (50px Icon + 8px padding oben/unten)
+const TOPBAR_HEIGHT = 66; // Feste TopBar Höhe (wie EmpfehlungPage)
 
-export default function EmpfehlungPage() {
+export default function WerbungPage() {
+  useRemoveFromMinimized();
   const [started, setStarted] = useState(false);
-  const [mode, setMode] = useState<"normal" | "draw" | "erase" | "laser">("draw");
+  const [mode, setMode] =
+    useState<"normal" | "draw" | "erase" | "laser">("draw");
   const [drawingPaths, setDrawingPaths] = useState<Path[]>([]);
+  const [showWerbung, setShowWerbung] = useState(false);
+
   const [flowCompleted, setFlowCompleted] = useState(false);
   const [showWeiterButton, setShowWeiterButton] = useState(false);
-  
+
   const [contentHeight, setContentHeight] = useState(0);
 
   const router = useRouter();
@@ -43,17 +50,29 @@ export default function EmpfehlungPage() {
   }, []);
 
   /* =========================
-     BUTTON DELAY
+     FLOW START
+     ========================= */
+
+  const handleFinish = () => {
+    setShowWerbung(true);
+  };
+
+  /* =========================
+     BUTTON DELAY (2 SEK)
      ========================= */
 
   useEffect(() => {
     if (!flowCompleted) return;
-    const t = setTimeout(() => setShowWeiterButton(true), 2000);
+
+    const t = setTimeout(() => {
+      setShowWeiterButton(true);
+    }, 2000);
+
     return () => clearTimeout(t);
   }, [flowCompleted]);
 
   /* =========================
-     EXPORT + NAV
+     WEITER → EXPORT + NAV
      ========================= */
 
   const handleWeiter = async () => {
@@ -62,18 +81,23 @@ export default function EmpfehlungPage() {
     
     try {
       const image = await exportPageContainerAsImage({
-        containerId: "empfehlung-export",
+        containerId: "werbung-export",
         backgroundColor: "#ffffff",
         quality: 0.85,
       });
-      sessionStorage.setItem("empfehlungScreenshot", image);
+      sessionStorage.setItem("werbungScreenshot", image);
     } catch (error) {
       console.error("Export failed:", error);
     }
-    router.push("/pages/kontaktbogen");
+    
+    router.push("/firmenvorstellung/pages/empfehlung");
   };
 
   const isDrawingActive = mode !== "laser"; // Zeichnen aktiv außer im Laser-Modus
+
+  /* =========================
+     RENDER
+     ========================= */
 
   return (
     <>
@@ -84,7 +108,7 @@ export default function EmpfehlungPage() {
         {/* Export Container - beginnt unter TopBar */}
         {contentHeight > 0 && (
           <div 
-            id="empfehlung-export"
+            id="werbung-export"
             style={{
               position: "absolute",
               top: TOPBAR_HEIGHT,
@@ -113,15 +137,23 @@ export default function EmpfehlungPage() {
                     top: "50%",
                     left: "50%",
                     transform: "translate(-50%, -50%)",
-                    zIndex: 9999,
+                    zIndex: 50,
                     pointerEvents: "auto",
                   }}
                 />
               )}
 
               {started && (
-                <EmpfehlungFlow 
-                  containerHeight={contentHeight}
+                <GrundSkel
+                  mode={mode}
+                  start={true}
+                  onFinish={handleFinish}
+                />
+              )}
+
+              {showWerbung && (
+                <WerbungFlow
+                  mode={mode}
                   onComplete={() => setFlowCompleted(true)}
                 />
               )}
