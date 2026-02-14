@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { APP_CATALOG } from "@/app/config/app-catalog";
 import { getAppGroup, getAppGroupIcon } from "@/app/config/app-groups";
+import { FolderIcon } from "@/components/FolderIcon";
 import {
   clearMinimizedApps,
   getMinimizedApps,
@@ -26,11 +27,11 @@ interface Folder {
   y: number;
 }
 
-const GRID_SIZE = 100; // Grid cell size in pixels
+const GRID_SIZE = 50; // Grid cell size in pixels (finer grid for more precise placement)
 const ICON_SIZE = 140; // Icon container size (w-24 h-24 + padding) in pixels
 const STORAGE_KEY = "desktop-icon-positions";
 const FOLDERS_KEY = "desktop-folders";
-const DRAG_THRESHOLD = 5; // Minimum pixels to move before considering it a drag
+const DRAG_THRESHOLD = 20; // Minimum pixels to move before considering it a drag
 const COLLISION_DISTANCE = 100; // Distance in pixels to trigger folder creation
 
 export default function DesktopPage() {
@@ -184,6 +185,48 @@ export default function DesktopPage() {
     return iconPositions.filter((pos) => !getAppFolder(pos.id));
   };
 
+  // Get apps in a folder for FolderIcon display
+  const getFolderApps = (folder: Folder) => {
+    // Mapping von Icon-IDs zu APP_CATALOG IDs
+    const idMappings: Record<string, string> = {
+      "firmenvorstellung": "ovb-home",
+      "easy": "easy",
+    };
+
+    return folder.appIds
+      .map((appId) => {
+        // Special case for 'easy' which is not in APP_CATALOG
+        if (appId === "easy") {
+          return {
+            id: appId,
+            name: "OVB Easy",
+            icon: "/ovb2.png",
+            color: undefined,
+          };
+        }
+
+        // Map icon ID to catalog ID
+        const catalogId = idMappings[appId] || appId;
+        const appFromCatalog = APP_CATALOG.find((app) => app.id === catalogId);
+        const appGroup = getAppGroup(appId);
+        
+        let icon = undefined;
+        if (appGroup) {
+          icon = getAppGroupIcon(appGroup);
+        } else if (appFromCatalog?.icon) {
+          icon = appFromCatalog.icon;
+        }
+
+        return {
+          id: appId,
+          name: appFromCatalog?.title ?? appId,
+          icon: icon,
+          color: undefined,
+        };
+      })
+      .slice(0, 9); // Only show first 9 apps
+  };
+
   // Helper function to get coordinates from mouse or touch event
   const getEventCoordinates = (
     e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>
@@ -282,12 +325,12 @@ export default function DesktopPage() {
     }
   };
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!draggingId) return;
 
     // Check if drag threshold has been exceeded
     if (!isDragging) {
-      const coords = getEventCoordinates(e);
+      const coords = { x: e.clientX, y: e.clientY };
       const distance = Math.sqrt(
         Math.pow(coords.x - dragStartPos.x, 2) +
           Math.pow(coords.y - dragStartPos.y, 2)
@@ -296,14 +339,12 @@ export default function DesktopPage() {
       setIsDragging(true);
     }
 
-    const coords = getEventCoordinates(e);
+    const coords = { x: e.clientX, y: e.clientY };
     const newX = coords.x - dragOffset.x;
     const newY = coords.y - dragOffset.y;
 
-    const snappedPos = constrainToBounds(
-      snapToGrid(newX),
-      snapToGrid(newY)
-    );
+    // Don't snap to grid while dragging - only constrain to bounds
+    const constrainedPos = constrainToBounds(newX, newY);
 
     // Update position if it's a folder or an icon
     const isFolder = draggingId.startsWith("folder-");
@@ -311,7 +352,7 @@ export default function DesktopPage() {
     if (isFolder) {
       setFolders((prev) =>
         prev.map((folder) =>
-          folder.id === draggingId ? { ...folder, ...snappedPos } : folder
+          folder.id === draggingId ? { ...folder, ...constrainedPos } : folder
         )
       );
     } else {
@@ -320,11 +361,11 @@ export default function DesktopPage() {
         const existing = prev.find((p) => p.id === draggingId);
         if (existing) {
           return prev.map((pos) =>
-            pos.id === draggingId ? { ...pos, ...snappedPos } : pos
+            pos.id === draggingId ? { ...pos, ...constrainedPos } : pos
           );
         } else {
           // New temporary position for dragging from folder
-          return [...prev, { id: draggingId, ...snappedPos }];
+          return [...prev, { id: draggingId, ...constrainedPos }];
         }
       });
     }
@@ -349,10 +390,8 @@ export default function DesktopPage() {
     const newX = coords.x - dragOffset.x;
     const newY = coords.y - dragOffset.y;
 
-    const snappedPos = constrainToBounds(
-      snapToGrid(newX),
-      snapToGrid(newY)
-    );
+    // Don't snap to grid while dragging - only constrain to bounds
+    const constrainedPos = constrainToBounds(newX, newY);
 
     // Update position if it's a folder or an icon
     const isFolder = draggingId.startsWith("folder-");
@@ -360,7 +399,7 @@ export default function DesktopPage() {
     if (isFolder) {
       setFolders((prev) =>
         prev.map((folder) =>
-          folder.id === draggingId ? { ...folder, ...snappedPos } : folder
+          folder.id === draggingId ? { ...folder, ...constrainedPos } : folder
         )
       );
     } else {
@@ -369,19 +408,50 @@ export default function DesktopPage() {
         const existing = prev.find((p) => p.id === draggingId);
         if (existing) {
           return prev.map((pos) =>
-            pos.id === draggingId ? { ...pos, ...snappedPos } : pos
+            pos.id === draggingId ? { ...pos, ...constrainedPos } : pos
           );
         } else {
           // New temporary position for dragging from folder
-          return [...prev, { id: draggingId, ...snappedPos }];
+          return [...prev, { id: draggingId, ...constrainedPos }];
         }
       });
     }
   };
 
-  const handleMouseUp = () => {
+  const handlePointerUp = () => {
     if (draggingId) {
       const isFolder = draggingId.startsWith("folder-");
+      
+      // Snap to grid on release
+      if (isDragging) {
+        if (isFolder) {
+          const folder = folders.find((f) => f.id === draggingId);
+          if (folder) {
+            const snappedPos = constrainToBounds(
+              snapToGrid(folder.x),
+              snapToGrid(folder.y)
+            );
+            setFolders((prev) =>
+              prev.map((f) =>
+                f.id === draggingId ? { ...f, ...snappedPos } : f
+              )
+            );
+          }
+        } else {
+          const icon = iconPositions.find((p) => p.id === draggingId);
+          if (icon) {
+            const snappedPos = constrainToBounds(
+              snapToGrid(icon.x),
+              snapToGrid(icon.y)
+            );
+            setIconPositions((prev) =>
+              prev.map((p) =>
+                p.id === draggingId ? { ...p, ...snappedPos } : p
+              )
+            );
+          }
+        }
+      }
       
       if (isFolder) {
         // Save folder position
@@ -424,6 +494,10 @@ export default function DesktopPage() {
           
           setDraggingFromFolder(null);
           savePositions(iconPositions);
+        } else if (draggingFromFolder && !isDragging) {
+          // Started dragging from folder but didn't move enough - clean up temporary position
+          setIconPositions((prev) => prev.filter((p) => p.id !== draggingId));
+          setDraggingFromFolder(null);
         } else {
           // Normal desktop icon drag
           savePositions(iconPositions);
@@ -513,6 +587,37 @@ export default function DesktopPage() {
     if (draggingId) {
       const isFolder = draggingId.startsWith("folder-");
       
+      // Snap to grid on release
+      if (isDragging) {
+        if (isFolder) {
+          const folder = folders.find((f) => f.id === draggingId);
+          if (folder) {
+            const snappedPos = constrainToBounds(
+              snapToGrid(folder.x),
+              snapToGrid(folder.y)
+            );
+            setFolders((prev) =>
+              prev.map((f) =>
+                f.id === draggingId ? { ...f, ...snappedPos } : f
+              )
+            );
+          }
+        } else {
+          const icon = iconPositions.find((p) => p.id === draggingId);
+          if (icon) {
+            const snappedPos = constrainToBounds(
+              snapToGrid(icon.x),
+              snapToGrid(icon.y)
+            );
+            setIconPositions((prev) =>
+              prev.map((p) =>
+                p.id === draggingId ? { ...p, ...snappedPos } : p
+              )
+            );
+          }
+        }
+      }
+      
       if (isFolder) {
         // Save folder position
         saveFolders(folders);
@@ -554,6 +659,10 @@ export default function DesktopPage() {
           
           setDraggingFromFolder(null);
           savePositions(iconPositions);
+        } else if (draggingFromFolder && !isDragging) {
+          // Started dragging from folder but didn't move enough - clean up temporary position
+          setIconPositions((prev) => prev.filter((p) => p.id !== draggingId));
+          setDraggingFromFolder(null);
         } else {
           // Normal desktop icon drag
           savePositions(iconPositions);
@@ -671,9 +780,10 @@ export default function DesktopPage() {
       ref={containerRef}
       className="relative w-full h-screen overflow-hidden bg-black font-sans select-none"
       style={{ touchAction: "none" }}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
+      onPointerCancel={handlePointerUp}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
@@ -695,8 +805,6 @@ export default function DesktopPage() {
           {formatDate(currentTime)}
         </p>
       </div>
-
-
 
       {/* Draggable Icons Container */}
       {getLooseApps().map((pos) => {
@@ -855,23 +963,11 @@ export default function DesktopPage() {
           onMouseDown={(e) => handleMouseDown(e, folder.id)}
           onTouchStart={(e) => handleTouchStart(e, folder.id)}
         >
-          <button
-            onClick={() => !wasJustDragging && setOpeningFolderId(folder.id)}
-            className="group flex flex-col items-center gap-2 focus:outline-none w-full"
-          >
-            <div className="relative w-24 h-24 bg-transparent rounded-2xl  flex items-center justify-center p-4 transition-all duration-500 hover:scale-105 active:scale-95">
-              <Image
-                src="/folder.png"
-                alt="Folder"
-                width={64}
-                height={64}
-                className="object-contain"
-              />
-            </div>
-            <span className="text-white text-sm font-medium drop-shadow-md group-hover:bg-white/20 px-2 py-0.5 rounded transition-colors break-words text-center max-w-20">
-              {folder.name}
-            </span>
-          </button>
+          <FolderIcon
+          apps={getFolderApps(folder)}
+          title={folder.name}
+          onClick={() => !wasJustDragging && setOpeningFolderId(folder.id)}
+        />
         </div>
       ))}
 
@@ -965,29 +1061,37 @@ export default function DesktopPage() {
                   <div
                     key={appId}
                     className="relative"
-                    onMouseDown={(e) => handleMouseDown(e, appId, openingFolderId)}
-                    onTouchStart={(e) => handleTouchStart(e, appId, openingFolderId)}
                   >
                     <button
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        const coords = { x: e.clientX, y: e.clientY };
+                        setDraggingId(appId);
+                        setDragStartPos(coords);
+                        setIsDragging(false);
+                        setDraggingFromFolder(openingFolderId);
+                        setDragOffset({ x: 70, y: 70 });
+                      }}
                       onClick={() => {
-                        if (wasJustDragging) return;
+                        if (wasJustDragging || isDragging) return;
+                        
+                        setOpeningFolderId(null);
                         
                         if (appId === "firmenvorstellung") {
-                          setOpeningFolderId(null);
                           setTimeout(() => {
                             setWasJustDragging(false);
                             handleAppClick();
                           }, 100);
                         } else if (appId === "easy") {
-                          setOpeningFolderId(null);
                           setTimeout(() => {
                             setWasJustDragging(false);
                             handleEasyClick();
                           }, 100);
                         }
                       }}
-                      className={`flex flex-col items-center gap-2 cursor-grab active:cursor-grabbing w-full transition-opacity ${
-                        isBeingDragged ? "opacity-30" : "opacity-100"
+                      className={`flex flex-col items-center gap-2 w-full transition-opacity ${
+                        isBeingDragged ? "opacity-30" : "opacity-100 cursor-pointer hover:bg-white/10 rounded-xl p-2 -m-2"
                       }`}
                     >
                       <div className={`w-20 h-20 rounded-2xl shadow-xl flex items-center justify-center p-3 transition-all duration-300 hover:scale-105 ${
@@ -1016,33 +1120,37 @@ export default function DesktopPage() {
             </p>
           </div>
 
-          {/* Dragged Icon from Folder - follows cursor */}
-          {draggingFromFolder === openingFolderId && draggingId && isDragging && (
-            <div
-              className="fixed pointer-events-none z-[60]"
-              style={{
-                left: `${iconPositions.find((p) => p.id === draggingId)?.x ?? 0}px`,
-                top: `${iconPositions.find((p) => p.id === draggingId)?.y ?? 0}px`,
-              }}
-            >
-              <div className="flex flex-col items-center gap-2 opacity-90">
-                <div className={`w-20 h-20 rounded-2xl shadow-2xl flex items-center justify-center p-3 ${
-                  draggingId === "firmenvorstellung" ? "bg-white/90" : draggingId === "easy" ? "bg-[#003A66]" : "bg-white/90"
-                }`}>
-                  <Image
-                    src={draggingId === "firmenvorstellung" ? "/ovb.png" : draggingId === "easy" ? "/ovb2.png" : "/ovb.png"}
-                    alt={draggingId}
-                    width={48}
-                    height={48}
-                    className="object-contain"
-                  />
-                </div>
-                <span className="text-white text-xs font-medium text-center">
-                  {draggingId === "firmenvorstellung" ? "Firmenvorstellung" : draggingId === "easy" ? "OVB Easy" : draggingId}
-                </span>
-              </div>
+
+        </div>
+      )}
+
+      {/* Global Dragged Icon - shown when dragging from folder */}
+      {draggingFromFolder && draggingId && isDragging && (
+        <div
+          className="fixed pointer-events-none z-[100]"
+          style={{
+            left: `${iconPositions.find((p) => p.id === draggingId)?.x ?? 0}px`,
+            top: `${iconPositions.find((p) => p.id === draggingId)?.y ?? 0}px`,
+            transform: 'scale(1.1)',
+            filter: 'drop-shadow(0 25px 50px rgba(0,0,0,0.5))',
+          }}
+        >
+          <div className="flex flex-col items-center gap-2 animate-pulse">
+            <div className={`w-24 h-24 rounded-2xl shadow-2xl flex items-center justify-center p-4 ${
+              draggingId === "firmenvorstellung" ? "bg-white/90" : draggingId === "easy" ? "bg-[#003A66]" : "bg-white/90"
+            }`}>
+              <Image
+                src={draggingId === "firmenvorstellung" ? "/ovb.png" : draggingId === "easy" ? "/ovb2.png" : "/ovb.png"}
+                alt={draggingId}
+                width={48}
+                height={48}
+                className="object-contain"
+              />
             </div>
-          )}
+            <span className="text-white text-sm font-medium drop-shadow-lg px-2 py-0.5 rounded bg-black/30">
+              {draggingId === "firmenvorstellung" ? "Firmenvorstellung" : draggingId === "easy" ? "OVB Easy" : draggingId}
+            </span>
+          </div>
         </div>
       )}
 
