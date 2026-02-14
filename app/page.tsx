@@ -184,6 +184,17 @@ export default function DesktopPage() {
     return iconPositions.filter((pos) => !getAppFolder(pos.id));
   };
 
+  // Helper function to get coordinates from mouse or touch event
+  const getEventCoordinates = (
+    e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>
+  ): { x: number; y: number } => {
+    if ("touches" in e) {
+      return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    } else {
+      return { x: e.clientX, y: e.clientY };
+    }
+  };
+
   const handleMouseDown = (
     e: React.MouseEvent<HTMLDivElement>,
     iconId: string,
@@ -193,8 +204,9 @@ export default function DesktopPage() {
     if (e.button !== 0) return;
 
     e.preventDefault();
+    const coords = getEventCoordinates(e);
     setDraggingId(iconId);
-    setDragStartPos({ x: e.clientX, y: e.clientY });
+    setDragStartPos(coords);
     setIsDragging(false); // Reset (will be set to true if moved > threshold)
     
     // Track if dragging from folder
@@ -206,8 +218,8 @@ export default function DesktopPage() {
     const folder = folders.find((f) => f.id === iconId);
     if (folder) {
       setDragOffset({
-        x: e.clientX - folder.x,
-        y: e.clientY - folder.y,
+        x: coords.x - folder.x,
+        y: coords.y - folder.y,
       });
       return;
     }
@@ -216,8 +228,50 @@ export default function DesktopPage() {
     const iconPos = iconPositions.find((p) => p.id === iconId);
     if (iconPos) {
       setDragOffset({
-        x: e.clientX - iconPos.x,
-        y: e.clientY - iconPos.y,
+        x: coords.x - iconPos.x,
+        y: coords.y - iconPos.y,
+      });
+    } else if (fromFolderId) {
+      // Dragging from folder - start from cursor position
+      setDragOffset({
+        x: 70,
+        y: 70,
+      });
+    }
+  };
+
+  const handleTouchStart = (
+    e: React.TouchEvent<HTMLDivElement>,
+    iconId: string,
+    fromFolderId?: string
+  ) => {
+    e.preventDefault();
+    const coords = getEventCoordinates(e);
+    setDraggingId(iconId);
+    setDragStartPos(coords);
+    setIsDragging(false); // Reset (will be set to true if moved > threshold)
+    
+    // Track if dragging from folder
+    if (fromFolderId) {
+      setDraggingFromFolder(fromFolderId);
+    }
+
+    // Check if it's a folder
+    const folder = folders.find((f) => f.id === iconId);
+    if (folder) {
+      setDragOffset({
+        x: coords.x - folder.x,
+        y: coords.y - folder.y,
+      });
+      return;
+    }
+
+    // Check if it's a loose app
+    const iconPos = iconPositions.find((p) => p.id === iconId);
+    if (iconPos) {
+      setDragOffset({
+        x: coords.x - iconPos.x,
+        y: coords.y - iconPos.y,
       });
     } else if (fromFolderId) {
       // Dragging from folder - start from cursor position
@@ -233,16 +287,67 @@ export default function DesktopPage() {
 
     // Check if drag threshold has been exceeded
     if (!isDragging) {
+      const coords = getEventCoordinates(e);
       const distance = Math.sqrt(
-        Math.pow(e.clientX - dragStartPos.x, 2) +
-          Math.pow(e.clientY - dragStartPos.y, 2)
+        Math.pow(coords.x - dragStartPos.x, 2) +
+          Math.pow(coords.y - dragStartPos.y, 2)
       );
       if (distance < DRAG_THRESHOLD) return;
       setIsDragging(true);
     }
 
-    const newX = e.clientX - dragOffset.x;
-    const newY = e.clientY - dragOffset.y;
+    const coords = getEventCoordinates(e);
+    const newX = coords.x - dragOffset.x;
+    const newY = coords.y - dragOffset.y;
+
+    const snappedPos = constrainToBounds(
+      snapToGrid(newX),
+      snapToGrid(newY)
+    );
+
+    // Update position if it's a folder or an icon
+    const isFolder = draggingId.startsWith("folder-");
+    
+    if (isFolder) {
+      setFolders((prev) =>
+        prev.map((folder) =>
+          folder.id === draggingId ? { ...folder, ...snappedPos } : folder
+        )
+      );
+    } else {
+      // Check if it exists in iconPositions, if not create temporary position
+      setIconPositions((prev) => {
+        const existing = prev.find((p) => p.id === draggingId);
+        if (existing) {
+          return prev.map((pos) =>
+            pos.id === draggingId ? { ...pos, ...snappedPos } : pos
+          );
+        } else {
+          // New temporary position for dragging from folder
+          return [...prev, { id: draggingId, ...snappedPos }];
+        }
+      });
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!draggingId) return;
+
+    // Check if drag threshold has been exceeded
+    if (!isDragging) {
+      const coords = getEventCoordinates(e);
+      const distance = Math.sqrt(
+        Math.pow(coords.x - dragStartPos.x, 2) +
+          Math.pow(coords.y - dragStartPos.y, 2)
+      );
+      if (distance < DRAG_THRESHOLD) return;
+      setIsDragging(true);
+    }
+
+    e.preventDefault();
+    const coords = getEventCoordinates(e);
+    const newX = coords.x - dragOffset.x;
+    const newY = coords.y - dragOffset.y;
 
     const snappedPos = constrainToBounds(
       snapToGrid(newX),
@@ -404,6 +509,136 @@ export default function DesktopPage() {
     }
   };
 
+  const handleTouchEnd = () => {
+    if (draggingId) {
+      const isFolder = draggingId.startsWith("folder-");
+      
+      if (isFolder) {
+        // Save folder position
+        saveFolders(folders);
+      } else {
+        // Check if we were dragging from a folder
+        if (draggingFromFolder && isDragging) {
+          // App was dragged out of folder
+          const folder = folders.find((f) => f.id === draggingFromFolder);
+          if (folder) {
+            // Remove app from folder
+            const updatedAppIds = folder.appIds.filter((id) => id !== draggingId);
+            
+            if (updatedAppIds.length < 2) {
+              // Remove folder if < 2 apps left, restore remaining app
+              if (updatedAppIds.length === 1) {
+                const remainingAppId = updatedAppIds[0];
+                // Only filter out the remaining app (the dragged one already has its position)
+                setIconPositions((prev) => [
+                  ...prev.filter((p) => p.id !== remainingAppId),
+                  { id: remainingAppId, x: folder.x, y: folder.y },
+                ]);
+              }
+              
+              const updatedFolders = folders.filter((f) => f.id !== draggingFromFolder);
+              setFolders(updatedFolders);
+              saveFolders(updatedFolders);
+            } else {
+              // Just update folder with remaining apps
+              const updatedFolders = folders.map((f) =>
+                f.id === draggingFromFolder ? { ...f, appIds: updatedAppIds } : f
+              );
+              setFolders(updatedFolders);
+              saveFolders(updatedFolders);
+            }
+            
+            // Close folder modal
+            setOpeningFolderId(null);
+          }
+          
+          setDraggingFromFolder(null);
+          savePositions(iconPositions);
+        } else {
+          // Normal desktop icon drag
+          savePositions(iconPositions);
+          
+          // Check if this app was in a folder - if so, remove it
+          const appFolder = getAppFolder(draggingId);
+          if (appFolder) {
+            const updatedAppIds = appFolder.appIds.filter((id) => id !== draggingId);
+            
+            if (updatedAppIds.length < 2) {
+              // Remove folder if < 2 apps left, restore apps as loose
+              const remainingApps = iconPositions.filter((p) => updatedAppIds.includes(p.id));
+              
+              const restoredApps = remainingApps.concat(
+                updatedAppIds.map((appId) => {
+                  const origIcon = iconPositions.find((p) => p.id === appId);
+                  if (origIcon) return origIcon;
+                  // Fallback position
+                  return { id: appId, x: appFolder.x, y: appFolder.y };
+                })
+              );
+              
+              setIconPositions(restoredApps);
+              savePositions(restoredApps);
+              
+              const updatedFolders = folders.filter((f) => f.id !== appFolder.id);
+              setFolders(updatedFolders);
+              saveFolders(updatedFolders);
+            } else {
+              // Just update folder with remaining apps
+              const updatedFolders = folders.map((f) =>
+                f.id === appFolder.id ? { ...f, appIds: updatedAppIds } : f
+              );
+              setFolders(updatedFolders);
+              saveFolders(updatedFolders);
+            }
+          }
+          
+          // Check for collisions with other icons to create folders
+          const draggedIcon = iconPositions.find((p) => p.id === draggingId);
+          if (draggedIcon && !getAppFolder(draggingId)) {  // Only if not already in a folder
+            const collidingIcon = getLooseApps().find(
+              (p) => p.id !== draggingId && checkCollision(draggedIcon, p)
+            );
+            
+            if (collidingIcon && !getAppFolder(collidingIcon.id)) {
+              // Create folder
+              const folderId = `folder-${Date.now()}`;
+              const newFolder: Folder = {
+                id: folderId,
+                name: `Ordner ${folders.length + 1}`,
+                appIds: [draggingId, collidingIcon.id],
+                x: draggedIcon.x,
+                y: draggedIcon.y,
+              };
+              const updatedFolders = [...folders, newFolder];
+              setFolders(updatedFolders);
+              saveFolders(updatedFolders);
+              
+              // Remove these icons from loose positions
+              setIconPositions((prev) =>
+                prev.filter((p) => p.id !== draggingId && p.id !== collidingIcon.id)
+              );
+              
+              // Set up for renaming
+              setRenamingFolderId(folderId);
+              setFolderNameInput(newFolder.name);
+            }
+          }
+        }
+      }
+      
+      setDraggingId(null);
+      setDraggingFromFolder(null);
+      
+      // Only set wasJustDragging if we actually dragged
+      if (isDragging) {
+        setWasJustDragging(true);
+        setTimeout(() => setWasJustDragging(false), 200);
+      }
+      
+      setIsDragging(false);
+    }
+  };
+
   const handleAppClick = () => {
     // Don't trigger click if we were just dragging
     if (wasJustDragging) return;
@@ -435,9 +670,12 @@ export default function DesktopPage() {
     <div
       ref={containerRef}
       className="relative w-full h-screen overflow-hidden bg-black font-sans select-none"
+      style={{ touchAction: "none" }}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       <Image
         src="/pictures/strand.png"
@@ -475,6 +713,7 @@ export default function DesktopPage() {
                 width: `${ICON_SIZE}px`,
               }}
               onMouseDown={(e) => handleMouseDown(e, pos.id)}
+              onTouchStart={(e) => handleTouchStart(e, pos.id)}
             >
               <button
                 onClick={handleAppClick}
@@ -508,6 +747,7 @@ export default function DesktopPage() {
                 width: `${ICON_SIZE}px`,
               }}
               onMouseDown={(e) => handleMouseDown(e, pos.id)}
+              onTouchStart={(e) => handleTouchStart(e, pos.id)}
             >
               <a
                 href="https://easy.ovb.at/"
@@ -613,6 +853,7 @@ export default function DesktopPage() {
             width: `${ICON_SIZE}px`,
           }}
           onMouseDown={(e) => handleMouseDown(e, folder.id)}
+          onTouchStart={(e) => handleTouchStart(e, folder.id)}
         >
           <button
             onClick={() => !wasJustDragging && setOpeningFolderId(folder.id)}
@@ -725,6 +966,7 @@ export default function DesktopPage() {
                     key={appId}
                     className="relative"
                     onMouseDown={(e) => handleMouseDown(e, appId, openingFolderId)}
+                    onTouchStart={(e) => handleTouchStart(e, appId, openingFolderId)}
                   >
                     <button
                       onClick={() => {
