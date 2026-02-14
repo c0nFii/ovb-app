@@ -4,7 +4,9 @@
       "Bash(npx tsc:*)",
       "Bash(npm run lint)",
       "Bash(npx cap sync:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(ls:*)",
+      "Bash(npx next build:*)"
     ]
   }
 }

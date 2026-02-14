@@ -52,6 +52,15 @@ export default function DesktopPage() {
   const [openingFolderId, setOpeningFolderId] = useState<string | null>(null);
   const [draggingFromFolder, setDraggingFromFolder] = useState<string | null>(null);
 
+  // Taskbar drag-to-trash state
+  const [draggingTaskbarApp, setDraggingTaskbarApp] = useState<string | null>(null);
+  const [taskbarDragPos, setTaskbarDragPos] = useState({ x: 0, y: 0 });
+  const [taskbarDragStartPos, setTaskbarDragStartPos] = useState({ x: 0, y: 0 });
+  const [isTaskbarDragging, setIsTaskbarDragging] = useState(false);
+  const [isOverTrash, setIsOverTrash] = useState(false);
+  const trashRef = useRef<HTMLButtonElement>(null);
+  const draggingTaskbarIcon = useRef<string>("");  // icon src for ghost
+
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
@@ -106,6 +115,80 @@ export default function DesktopPage() {
       window.removeEventListener("minimized-apps-changed", handleStorageChange);
     };
   }, []);
+
+  // --- Taskbar drag-to-trash handlers ---
+  const TASKBAR_DRAG_THRESHOLD = 10;
+
+  const checkOverTrash = (clientX: number, clientY: number) => {
+    if (!trashRef.current) return false;
+    const rect = trashRef.current.getBoundingClientRect();
+    const padding = 20;
+    return (
+      clientX >= rect.left - padding &&
+      clientX <= rect.right + padding &&
+      clientY >= rect.top - padding &&
+      clientY <= rect.bottom + padding
+    );
+  };
+
+  const handleTaskbarPointerDown = (e: React.MouseEvent | React.TouchEvent, route: string, iconSrc: string) => {
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+    e.preventDefault();
+
+    setDraggingTaskbarApp(route);
+    setTaskbarDragStartPos({ x: clientX, y: clientY });
+    setTaskbarDragPos({ x: clientX, y: clientY });
+    setIsTaskbarDragging(false);
+    draggingTaskbarIcon.current = iconSrc;
+  };
+
+  useEffect(() => {
+    if (draggingTaskbarApp === null) return;
+
+    const onMove = (e: MouseEvent | TouchEvent) => {
+      const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+      const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+
+      const dx = clientX - taskbarDragStartPos.x;
+      const dy = clientY - taskbarDragStartPos.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance > TASKBAR_DRAG_THRESHOLD) {
+        setIsTaskbarDragging(true);
+      }
+
+      setTaskbarDragPos({ x: clientX, y: clientY });
+      setIsOverTrash(checkOverTrash(clientX, clientY));
+    };
+
+    const onEnd = () => {
+      if (isTaskbarDragging && isOverTrash && draggingTaskbarApp) {
+        removeMinimizedApp(draggingTaskbarApp);
+        setMinimizedApps(getMinimizedApps());
+      } else if (!isTaskbarDragging && draggingTaskbarApp) {
+        // Was just a click, not a drag — navigate to the app
+        router.push(draggingTaskbarApp);
+      }
+
+      setDraggingTaskbarApp(null);
+      setIsTaskbarDragging(false);
+      setIsOverTrash(false);
+    };
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onEnd);
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("touchend", onEnd);
+
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onEnd);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onEnd);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draggingTaskbarApp, isTaskbarDragging, isOverTrash, taskbarDragStartPos]);
 
   const minimizedWithTitles = useMemo(() => {
     return minimizedApps.map((entry) => {
@@ -1162,39 +1245,30 @@ export default function DesktopPage() {
   <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
     {/* Das Dock-Gehäuse */}
     <div className="flex items-end gap-3 px-4 py-3 bg-white/20 dark:bg-black/30 backdrop-blur-2xl border border-white/30 rounded-[24px] shadow-2xl ring-1 ring-black/5 transition-all duration-300">
-      
+
       {/* Die minimierten Apps */}
       <div className="flex items-center gap-2">
         {minimizedWithTitles.map((entry) => (
           <div key={entry.route} className="relative group">
-            {/* Das App Icon */}
+            {/* Das App Icon — draggable zum Papierkorb */}
             <button
-              onClick={() => router.push(entry.route)}
-              className="w-14 h-14 rounded-[22%] bg-gradient-to-b from-white/20 to-transparent flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-90 hover:-translate-y-2 shadow-sm border border-white/10"
+              onMouseDown={(e) => handleTaskbarPointerDown(e, entry.route, entry.icon)}
+              onTouchStart={(e) => handleTaskbarPointerDown(e, entry.route, entry.icon)}
+              className={`w-14 h-14 rounded-[22%] bg-gradient-to-b from-white/20 to-transparent flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-90 hover:-translate-y-2 shadow-sm border border-white/10 select-none ${
+                draggingTaskbarApp === entry.route && isTaskbarDragging ? "opacity-30" : ""
+              }`}
               title={entry.title}
             >
-              <Image 
-                src={entry.icon} 
-                alt={entry.title} 
-                width={36} 
-                height={36} 
-                className="drop-shadow-md"
+              <Image
+                src={entry.icon}
+                alt={entry.title}
+                width={36}
+                height={36}
+                className="drop-shadow-md pointer-events-none"
               />
             </button>
 
-            {/* Schließen Button - erscheint erst bei Hover (optional, wirkt aufgeräumter) */}
-            <button
-              onClick={() => {
-                removeMinimizedApp(entry.route);
-                setMinimizedApps(getMinimizedApps());
-              }}
-              className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-white/90 text-black text-[10px] font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white shadow-md"
-            >
-              ✕
-            </button>
             
-            {/* Kleiner Punkt unter dem Icon (Indikator für aktive App) */}
-            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-white rounded-full opacity-60"></div>
           </div>
         ))}
       </div>
@@ -1202,26 +1276,54 @@ export default function DesktopPage() {
       {/* Trennlinie (wie beim Mac vor dem Papierkorb) */}
       <div className="w-[1px] h-10 bg-white/20 mx-1 self-center"></div>
 
-      {/* Papierkorb / Clear Button */}
+      {/* Papierkorb / Clear Button — auch Drop-Target */}
       <button
+        ref={trashRef}
         onClick={() => {
-          clearMinimizedApps();
-          setMinimizedApps([]);
+          if (!isTaskbarDragging) {
+            clearMinimizedApps();
+            setMinimizedApps([]);
+          }
         }}
-        className="w-14 h-14 rounded-[22%] hover:bg-white/10 flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-90 hover:-translate-y-2 group"
-        title="Taskleiste leeren"
+        className={`w-14 h-14 rounded-[22%] hover:bg-white/10 flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-90 hover:-translate-y-2 group ${
+          isOverTrash ? "scale-125 bg-red-500/30 ring-2 ring-[#003A66] shadow-[0_0_20px_rgba(0,58,102,0.5)]" : ""
+        }`}
+        title="Apps hierher ziehen zum Schließen"
       >
-        <Image 
-          src="/trash-icon.png" 
-          alt="Löschen" 
-          width={55} 
-          height={55} 
-          className="opacity-70 group-hover:opacity-100 transition-opacity" 
+        <Image
+          src="/trash-icon.png"
+          alt="Löschen"
+          width={55}
+          height={55}
+          className={`transition-all duration-200 ${isOverTrash ? "opacity-100 scale-110" : "opacity-70 group-hover:opacity-100"}`}
         />
       </button>
     </div>
   </div>
 )}
+
+      {/* Ghost-Element für Taskbar-Drag */}
+      {draggingTaskbarApp && isTaskbarDragging && (
+        <div
+          className="fixed z-[9999] pointer-events-none"
+          style={{
+            left: taskbarDragPos.x - 28,
+            top: taskbarDragPos.y - 28,
+          }}
+        >
+          <div className={`w-14 h-14 rounded-[22%] bg-gradient-to-b from-white/30 to-white/10 backdrop-blur-xl flex items-center justify-center shadow-2xl border border-white/30 transition-transform duration-150 ${
+            isOverTrash ? "scale-75 opacity-60" : "scale-110"
+          }`}>
+            <Image
+              src={draggingTaskbarIcon.current}
+              alt="Dragging"
+              width={36}
+              height={36}
+              className="drop-shadow-lg"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
