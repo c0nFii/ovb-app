@@ -1159,47 +1159,69 @@ export default function DesktopPage() {
       )}
 
       {minimizedWithTitles.length > 0 && (
-        <div className="absolute bottom-0 left-0 right-0 min-h-16 bg-black/20 backdrop-blur-md border-t border-white/20 flex items-center justify-center gap-4 px-4 py-2">
-          <div className="flex items-center gap-3">
-            {minimizedWithTitles.map((entry) => (
-              <div key={entry.route} className="relative w-10 h-10">
-                <button
-                  onClick={() => router.push(entry.route)}
-                  className="w-10 h-10 rounded-xl bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors"
-                  title={entry.title}
-                  aria-label={entry.title}
-                >
-                  <Image src={entry.icon} alt={entry.title} width={18} height={18} />
-                </button>
+  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+    {/* Das Dock-Gehäuse */}
+    <div className="flex items-end gap-3 px-4 py-3 bg-white/20 dark:bg-black/30 backdrop-blur-2xl border border-white/30 rounded-[24px] shadow-2xl ring-1 ring-black/5 transition-all duration-300">
+      
+      {/* Die minimierten Apps */}
+      <div className="flex items-center gap-2">
+        {minimizedWithTitles.map((entry) => (
+          <div key={entry.route} className="relative group">
+            {/* Das App Icon */}
+            <button
+              onClick={() => router.push(entry.route)}
+              className="w-14 h-14 rounded-[22%] bg-gradient-to-b from-white/20 to-transparent flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-90 hover:-translate-y-2 shadow-sm border border-white/10"
+              title={entry.title}
+            >
+              <Image 
+                src={entry.icon} 
+                alt={entry.title} 
+                width={36} 
+                height={36} 
+                className="drop-shadow-md"
+              />
+            </button>
 
-                <button
-                  onClick={() => {
-                    removeMinimizedApp(entry.route);
-                    setMinimizedApps(getMinimizedApps());
-                  }}
-                  className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-white text-[#12324e] text-xs font-bold leading-none flex items-center justify-center hover:bg-slate-200"
-                  title={`${entry.title} schließen`}
-                  aria-label={`${entry.title} schließen`}
-                >
-                  x
-                </button>
-              </div>
-            ))}
+            {/* Schließen Button - erscheint erst bei Hover (optional, wirkt aufgeräumter) */}
+            <button
+              onClick={() => {
+                removeMinimizedApp(entry.route);
+                setMinimizedApps(getMinimizedApps());
+              }}
+              className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-white/90 text-black text-[10px] font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white shadow-md"
+            >
+              ✕
+            </button>
+            
+            {/* Kleiner Punkt unter dem Icon (Indikator für aktive App) */}
+            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-white rounded-full opacity-60"></div>
           </div>
+        ))}
+      </div>
 
-          <button
-            onClick={() => {
-              clearMinimizedApps();
-              setMinimizedApps([]);
-            }}
-            className="h-10 w-10 rounded-xl  hover:bg-white/25 flex items-center justify-center transition-colors absolute right-4"
-            title="Taskleiste leeren"
-            aria-label="Taskleiste leeren"
-          >
-            <Image src="/trash-icon.png" alt="Löschen" width={52} height={52} className="opacity-90" />
-          </button>
-        </div>
-      )}
+      {/* Trennlinie (wie beim Mac vor dem Papierkorb) */}
+      <div className="w-[1px] h-10 bg-white/20 mx-1 self-center"></div>
+
+      {/* Papierkorb / Clear Button */}
+      <button
+        onClick={() => {
+          clearMinimizedApps();
+          setMinimizedApps([]);
+        }}
+        className="w-14 h-14 rounded-[22%] hover:bg-white/10 flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-90 hover:-translate-y-2 group"
+        title="Taskleiste leeren"
+      >
+        <Image 
+          src="/trash-icon.png" 
+          alt="Löschen" 
+          width={55} 
+          height={55} 
+          className="opacity-70 group-hover:opacity-100 transition-opacity" 
+        />
+      </button>
+    </div>
+  </div>
+)}
     </div>
   );
 }
